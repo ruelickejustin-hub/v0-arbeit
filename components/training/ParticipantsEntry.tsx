@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Users,
   FileSpreadsheet,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,13 +28,25 @@ import {
 } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useTraining } from '@/src/context/TrainingContext'
-import { useCSVImport, downloadCSVTemplate } from '@/src/hooks/useCSVImport'
+import { 
+  useFileImport, 
+  downloadCSVTemplate, 
+  downloadXLSXTemplate,
+  isFileSupported,
+  SUPPORTED_EXTENSIONS,
+} from '@/src/hooks/useFileImport'
 import type { Participant } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
-type EntryMode = 'manual' | 'csv'
+type EntryMode = 'manual' | 'file'
 
 /**
  * Generate unique participant ID
@@ -81,25 +94,25 @@ function ModeSwitch({
       </button>
       <button
         type="button"
-        onClick={() => onChange('csv')}
+        onClick={() => onChange('file')}
         className={cn(
           'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all',
-          value === 'csv'
+          value === 'file'
             ? 'bg-card text-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground'
         )}
       >
         <FileSpreadsheet className="h-4 w-4" />
-        CSV-Import
+        Datei-Import
       </button>
     </div>
   )
 }
 
 /**
- * CSV Import Area Component
+ * File Import Area Component - Supports CSV and XLSX
  */
-function CSVImportArea({
+function FileImportArea({
   onImport,
 }: {
   onImport: (participants: Participant[]) => void
@@ -111,30 +124,41 @@ function CSVImportArea({
     invalidRows,
     isProcessing,
     error,
-    parseCSV,
+    fileName,
+    parseFile,
     clearImport,
     getValidParticipants,
-  } = useCSVImport()
+  } = useFileImport()
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0]
       if (file) {
-        await parseCSV(file)
+        if (!isFileSupported(file.name)) {
+          toast.error('Nicht unterstütztes Format. Bitte CSV oder XLSX verwenden.')
+          return
+        }
+        await parseFile(file)
       }
+      // Reset input so same file can be selected again
+      event.target.value = ''
     },
-    [parseCSV]
+    [parseFile]
   )
 
   const handleDrop = useCallback(
     async (event: React.DragEvent) => {
       event.preventDefault()
       const file = event.dataTransfer.files[0]
-      if (file && file.name.endsWith('.csv')) {
-        await parseCSV(file)
+      if (file) {
+        if (!isFileSupported(file.name)) {
+          toast.error('Nicht unterstütztes Format. Bitte CSV oder XLSX verwenden.')
+          return
+        }
+        await parseFile(file)
       }
     },
-    [parseCSV]
+    [parseFile]
   )
 
   const handleImport = useCallback(() => {
@@ -163,7 +187,7 @@ function CSVImportArea({
             <Upload className="h-7 w-7 text-primary" />
           </div>
           <p className="mb-2 text-base font-medium text-foreground">
-            CSV-Datei hierher ziehen
+            Datei hierher ziehen
           </p>
           <p className="mb-4 text-sm text-muted-foreground">
             oder{' '}
@@ -176,23 +200,46 @@ function CSVImportArea({
             </button>
           </p>
           <p className="text-xs text-muted-foreground">
-            Trennzeichen: Semikolon (;) oder Komma (,)
+            Unterstützte Formate: CSV, XLSX
           </p>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept={SUPPORTED_EXTENSIONS.join(',')}
             onChange={handleFileSelect}
             className="hidden"
           />
         </div>
         
+        {/* Template Downloads */}
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={downloadCSVTemplate}>
-            <Download className="mr-2 h-4 w-4" />
-            CSV-Vorlage herunterladen
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Vorlage herunterladen
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={downloadCSVTemplate}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV-Vorlage
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadXLSXTemplate}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                XLSX-Vorlage
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+        
+        {/* Error display */}
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
       </div>
     )
   }
@@ -211,6 +258,11 @@ function CSVImportArea({
       {/* Summary */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {fileName && (
+            <span className="text-sm text-muted-foreground">
+              {fileName}
+            </span>
+          )}
           <Badge variant="secondary" className="gap-1.5 bg-success/10 text-success border-success/20">
             <CheckCircle className="h-3 w-3" />
             {validRows.length} gültig
@@ -402,6 +454,11 @@ export function ParticipantsEntry() {
   const [entryMode, setEntryMode] = useState<EntryMode>('manual')
   const [isCreatingSession, setIsCreatingSession] = useState(false)
 
+  // Switch to manual mode after import to show results
+  const handleModeChange = (mode: EntryMode) => {
+    setEntryMode(mode)
+  }
+
   // Session metadata handlers
   const handleTrainerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({ type: 'SET_TRAINER', trainer: e.target.value })
@@ -566,12 +623,12 @@ export function ParticipantsEntry() {
                 </Badge>
               )}
             </div>
-            <ModeSwitch value={entryMode} onChange={setEntryMode} />
+            <ModeSwitch value={entryMode} onChange={handleModeChange} />
           </div>
         </CardHeader>
         <CardContent>
-          {entryMode === 'csv' ? (
-            <CSVImportArea onImport={handleImportParticipants} />
+          {entryMode === 'file' ? (
+            <FileImportArea onImport={handleImportParticipants} />
           ) : (
             <ManualEntryArea
               participants={state.participants}
