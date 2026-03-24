@@ -16,11 +16,26 @@ import {
   Calendar,
   RotateCcw,
   X,
+  AlertCircle,
+  BookOpen,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { useTraining } from '@/src/context/TrainingContext'
 import { getDataProvider } from '@/src/adapters'
 import { appConfig } from '@/src/config/app.config'
@@ -77,77 +92,240 @@ function buildContentUrl(content: Unterweisungsverweis): string | null {
     return url
   }
   
-  // Relative SharePoint path - build full URL
+  // Relative SharePoint path - build full URL if site URL is configured
   if (appConfig.sharePointSiteUrl) {
-    // Ensure proper path joining (avoid double slashes)
     const baseUrl = appConfig.sharePointSiteUrl.replace(/\/$/, '')
     const relativePath = url.startsWith('/') ? url : `/${url}`
     return `${baseUrl}${relativePath}`
-  }
-  
-  // Demo mode fallback - try to open as-is if it looks like a valid path
-  // This allows testing with placeholder URLs
-  if (url.includes('.') || url.includes('/')) {
-    // It might be a relative URL that could work in certain contexts
-    return null
   }
   
   return null
 }
 
 /**
- * Content Card Component - Clean, premium design with toggle capability
+ * Check if URL is a video that can be embedded
+ */
+function isEmbeddableVideo(url: string): boolean {
+  return (
+    url.includes('youtube.com') ||
+    url.includes('youtu.be') ||
+    url.includes('vimeo.com') ||
+    url.endsWith('.mp4') ||
+    url.endsWith('.webm')
+  )
+}
+
+/**
+ * Get YouTube embed URL
+ */
+function getYouTubeEmbedUrl(url: string): string | null {
+  const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/)
+  if (videoIdMatch) {
+    return `https://www.youtube.com/embed/${videoIdMatch[1]}?autoplay=1`
+  }
+  return null
+}
+
+/**
+ * Video Player Modal
+ */
+function VideoPlayerModal({
+  isOpen,
+  onClose,
+  content,
+  url,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  content: Unterweisungsverweis
+  url: string
+}) {
+  const embedUrl = getYouTubeEmbedUrl(url)
+  const isYouTube = embedUrl !== null
+  const isDirectVideo = url.endsWith('.mp4') || url.endsWith('.webm')
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogHeader className="p-4 pb-0">
+          <DialogTitle className="flex items-center gap-2">
+            <Video className="h-5 w-5 text-destructive" />
+            {content.LinkLabel || content.Title}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="aspect-video bg-black">
+          {isYouTube && embedUrl ? (
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : isDirectVideo ? (
+            <video
+              src={url}
+              className="w-full h-full"
+              controls
+              autoPlay
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white">
+              <div className="text-center">
+                <AlertCircle className="mx-auto h-12 w-12 mb-3 opacity-50" />
+                <p>Video kann nicht eingebettet werden</p>
+                <Button
+                  variant="secondary"
+                  className="mt-4"
+                  onClick={() => window.open(url, '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  In neuem Tab öffnen
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * References Panel (Sheet/Drawer)
+ */
+function ReferencesPanel({
+  isOpen,
+  onClose,
+  references,
+  onOpenReference,
+  openedRefs,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  references: Unterweisungsverweis[]
+  onOpenReference: (ref: Unterweisungsverweis) => void
+  openedRefs: Set<string>
+}) {
+  return (
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-warning" />
+            Referenzdokumente
+          </SheetTitle>
+        </SheetHeader>
+        <div className="mt-6 space-y-3">
+          {references.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="mx-auto h-10 w-10 mb-3 opacity-50" />
+              <p>Keine Referenzdokumente verfügbar</p>
+            </div>
+          ) : (
+            references.map((ref) => {
+              const refUrl = buildContentUrl(ref)
+              const isAvailable = !!refUrl
+              const isOpened = openedRefs.has(ref.id)
+              
+              return (
+                <Card
+                  key={ref.id}
+                  className={cn(
+                    'cursor-pointer transition-all',
+                    isAvailable 
+                      ? 'hover:shadow-md hover:border-primary/40' 
+                      : 'opacity-60 cursor-not-allowed',
+                    isOpened && 'border-success/50 bg-success/5'
+                  )}
+                  onClick={() => isAvailable && onOpenReference(ref)}
+                >
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                      isOpened ? 'bg-success/15 text-success' : 'bg-warning/10 text-warning'
+                    )}>
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'font-medium truncate',
+                        isOpened ? 'text-success' : 'text-foreground'
+                      )}>
+                        {ref.LinkLabel || ref.FileName || ref.Title}
+                      </p>
+                      {!isAvailable && (
+                        <p className="text-xs text-muted-foreground">Nicht verfügbar</p>
+                      )}
+                    </div>
+                    {isOpened ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : isAvailable ? (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/**
+ * Content Card Component - Executes real actions based on content type
  */
 function ContentCard({
   content,
   isOpened,
-  onToggle,
+  onAction,
+  hasUrl,
 }: {
   content: Unterweisungsverweis
   isOpened: boolean
-  onToggle: () => void
+  onAction: () => void
+  hasUrl: boolean
 }) {
   const Icon = getDocTypeIcon(content.DocType)
   const colorClasses = getDocTypeColors(content.DocType)
-  
-  // Get display title (prefer LinkLabel, then FileName)
   const displayTitle = content.LinkLabel || content.FileName || content.Title
   
-  // Build the actual URL
-  const contentUrl = buildContentUrl(content)
-  
-  const handleCardClick = () => {
-    // Open content if URL available
-    if (contentUrl) {
-      window.open(contentUrl, '_blank', 'noopener,noreferrer')
-    }
-    // Mark as opened if not already
-    if (!isOpened) {
-      onToggle()
+  // Determine action icon based on type
+  const getActionIcon = () => {
+    if (!hasUrl) return AlertCircle
+    switch (content.DocType) {
+      case 'Video':
+        return Play
+      case 'Document':
+      case 'Reference':
+        return content.OpenMode === 'download' ? Download : ExternalLink
+      default:
+        return ExternalLink
     }
   }
   
-  const handleToggleClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onToggle()
-  }
+  const ActionIcon = getActionIcon()
   
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden transition-all duration-200',
-        'hover:shadow-md',
+        'group relative overflow-hidden transition-all duration-200',
+        hasUrl ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-70',
         isOpened 
           ? 'border-2 border-success/50 bg-success/5 shadow-sm shadow-success/10' 
-          : 'border border-border/60 bg-card hover:border-primary/40 shadow-sm'
+          : 'border border-border/60 bg-card',
+        hasUrl && !isOpened && 'hover:border-primary/40'
       )}
-      onClick={handleCardClick}
+      onClick={() => hasUrl && onAction()}
       role="button"
-      tabIndex={0}
+      tabIndex={hasUrl ? 0 : -1}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (hasUrl && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault()
-          handleCardClick()
+          onAction()
         }
       }}
     >
@@ -175,31 +353,98 @@ function ContentCard({
           )}>
             {displayTitle}
           </h3>
+          {!hasUrl && (
+            <p className="text-xs text-muted-foreground mt-0.5">Nicht verfügbar</p>
+          )}
         </div>
         
-        {/* Status / Action indicator - toggleable when opened */}
+        {/* Action indicator */}
         <div className="flex shrink-0 items-center">
           {isOpened ? (
-            <button
-              onClick={handleToggleClick}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground hover:bg-success/80 transition-colors"
-              title="Als nicht geöffnet markieren"
-            >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
               <Check className="h-4 w-4" />
-            </button>
+            </div>
           ) : (
             <div className={cn(
               'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-              'bg-muted/60 text-muted-foreground',
-              'group-hover:bg-primary group-hover:text-primary-foreground'
+              hasUrl 
+                ? 'bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
+                : 'bg-muted/40 text-muted-foreground/50'
             )}>
-              {content.DocType === 'Video' ? (
-                <Play className="h-4 w-4" />
-              ) : content.OpenMode === 'download' ? (
-                <Download className="h-4 w-4" />
-              ) : (
-                <ExternalLink className="h-4 w-4" />
-              )}
+              <ActionIcon className="h-4 w-4" />
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * References Summary Card - Opens the references panel
+ */
+function ReferencesSummaryCard({
+  references,
+  openedCount,
+  onClick,
+}: {
+  references: Unterweisungsverweis[]
+  openedCount: number
+  onClick: () => void
+}) {
+  const totalCount = references.length
+  const allOpened = openedCount === totalCount && totalCount > 0
+  
+  return (
+    <Card
+      className={cn(
+        'group cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-md',
+        allOpened 
+          ? 'border-2 border-success/50 bg-success/5' 
+          : 'border border-border/60 bg-card hover:border-warning/40'
+      )}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+    >
+      {allOpened && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-success" />
+      )}
+      
+      <CardContent className="flex items-center gap-4 p-4">
+        <div className={cn(
+          'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+          allOpened ? 'bg-success/15 text-success' : 'bg-warning/10 text-warning'
+        )}>
+          <BookOpen className="h-5 w-5" />
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <h3 className={cn(
+            'font-medium',
+            allOpened ? 'text-success' : 'text-foreground'
+          )}>
+            Referenzdokumente
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {openedCount} von {totalCount} geöffnet
+          </p>
+        </div>
+        
+        <div className="flex shrink-0 items-center">
+          {allOpened ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground group-hover:bg-warning group-hover:text-warning-foreground transition-colors">
+              <ChevronRight className="h-4 w-4" />
             </div>
           )}
         </div>
@@ -230,7 +475,7 @@ function ContentViewerSkeleton() {
 }
 
 /**
- * Session Info Card - Clean summary of current training session
+ * Session Info Card
  */
 function SessionInfoCard() {
   const { state } = useTraining()
@@ -265,6 +510,11 @@ export function ContentViewer() {
   const [contents, setContents] = useState<Unterweisungsverweis[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
+  // Modal/Panel state
+  const [videoModalOpen, setVideoModalOpen] = useState(false)
+  const [selectedVideo, setSelectedVideo] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
+  const [referencesPanelOpen, setReferencesPanelOpen] = useState(false)
+  
   // Load content for the selected module
   useEffect(() => {
     async function loadContent() {
@@ -285,44 +535,82 @@ export function ContentViewer() {
     loadContent()
   }, [state.selectedModule])
   
+  // Separate content by type
+  const { mainContent, references } = useMemo(() => {
+    const main: Unterweisungsverweis[] = []
+    const refs: Unterweisungsverweis[] = []
+    
+    for (const content of contents) {
+      if (content.DocCategory === 'Referenz' || content.DocType === 'Reference') {
+        refs.push(content)
+      } else {
+        main.push(content)
+      }
+    }
+    
+    // Sort by SortOrder
+    main.sort((a, b) => a.SortOrder - b.SortOrder)
+    refs.sort((a, b) => a.SortOrder - b.SortOrder)
+    
+    return { mainContent: main, references: refs }
+  }, [contents])
+  
   // Calculate progress
   const openedCount = Object.values(state.contentProgress).filter(Boolean).length
   const totalCount = contents.length
   const progressPercentage = totalCount > 0 ? (openedCount / totalCount) * 100 : 0
   
-  // Group content by category
-  const groupedContent = useMemo(() => {
-    const groups: Record<string, Unterweisungsverweis[]> = {}
+  // Count opened references
+  const openedRefsCount = references.filter(r => state.contentProgress[r.id]).length
+  const openedRefsSet = new Set(references.filter(r => state.contentProgress[r.id]).map(r => r.id))
+  
+  // Handle content action based on type
+  const handleContentAction = (content: Unterweisungsverweis) => {
+    const url = buildContentUrl(content)
+    if (!url) return
     
-    for (const content of contents) {
-      const category = content.DocCategory || 'Weitere'
-      if (!groups[category]) {
-        groups[category] = []
-      }
-      groups[category].push(content)
+    // Mark as opened
+    if (!state.contentProgress[content.id]) {
+      dispatch({ type: 'SET_CONTENT_PROGRESS', contentId: content.id, opened: true })
     }
     
-    // Sort each group by SortOrder
-    Object.values(groups).forEach(group => {
-      group.sort((a, b) => a.SortOrder - b.SortOrder)
-    })
-    
-    return groups
-  }, [contents])
-  
-  const categories = Object.keys(groupedContent)
-  
-  // Handle content toggle
-  const handleContentToggle = (contentId: string) => {
-    dispatch({ type: 'TOGGLE_CONTENT_PROGRESS', contentId })
+    switch (content.DocType) {
+      case 'Video':
+        if (isEmbeddableVideo(url)) {
+          setSelectedVideo({ content, url })
+          setVideoModalOpen(true)
+        } else {
+          window.open(url, '_blank', 'noopener,noreferrer')
+        }
+        break
+        
+      case 'Presentation':
+      case 'Document':
+      default:
+        window.open(url, '_blank', 'noopener,noreferrer')
+        break
+    }
   }
   
-  // Reset all content progress
+  // Handle reference open from panel
+  const handleOpenReference = (ref: Unterweisungsverweis) => {
+    const url = buildContentUrl(ref)
+    if (!url) return
+    
+    // Mark as opened
+    if (!state.contentProgress[ref.id]) {
+      dispatch({ type: 'SET_CONTENT_PROGRESS', contentId: ref.id, opened: true })
+    }
+    
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+  
+  // Reset progress
   const handleResetProgress = () => {
     dispatch({ type: 'RESET_CONTENT_PROGRESS' })
   }
   
-  // Navigation handlers
+  // Navigation
   const handleGoBack = () => {
     dispatch({ type: 'SET_STEP', step: 'participants' })
   }
@@ -399,23 +687,42 @@ export function ContentViewer() {
         </Card>
       ) : (
         <div className="space-y-8">
-          {categories.map((category) => (
-            <section key={category}>
+          {/* Main Content (Presentations, Videos) */}
+          {mainContent.length > 0 && (
+            <section>
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {category}
+                Unterweisung
               </h2>
               <div className="grid gap-3">
-                {groupedContent[category].map((content) => (
-                  <ContentCard
-                    key={content.id}
-                    content={content}
-                    isOpened={!!state.contentProgress[content.id]}
-                    onToggle={() => handleContentToggle(content.id)}
-                  />
-                ))}
+                {mainContent.map((content) => {
+                  const url = buildContentUrl(content)
+                  return (
+                    <ContentCard
+                      key={content.id}
+                      content={content}
+                      isOpened={!!state.contentProgress[content.id]}
+                      onAction={() => handleContentAction(content)}
+                      hasUrl={!!url}
+                    />
+                  )
+                })}
               </div>
             </section>
-          ))}
+          )}
+          
+          {/* References Section */}
+          {references.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Referenzen
+              </h2>
+              <ReferencesSummaryCard
+                references={references}
+                openedCount={openedRefsCount}
+                onClick={() => setReferencesPanelOpen(true)}
+              />
+            </section>
+          )}
         </div>
       )}
       
@@ -426,6 +733,28 @@ export function ContentViewer() {
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
+      
+      {/* Video Player Modal */}
+      {selectedVideo && (
+        <VideoPlayerModal
+          isOpen={videoModalOpen}
+          onClose={() => {
+            setVideoModalOpen(false)
+            setSelectedVideo(null)
+          }}
+          content={selectedVideo.content}
+          url={selectedVideo.url}
+        />
+      )}
+      
+      {/* References Panel */}
+      <ReferencesPanel
+        isOpen={referencesPanelOpen}
+        onClose={() => setReferencesPanelOpen(false)}
+        references={references}
+        onOpenReference={handleOpenReference}
+        openedRefs={openedRefsSet}
+      />
     </div>
   )
 }
