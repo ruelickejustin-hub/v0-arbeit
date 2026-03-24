@@ -5,11 +5,6 @@
 
 export type DataSourceMode = 'demo' | 'sharepoint'
 
-interface SharePointConfig {
-  siteUrl: string
-  contentLibrary: string
-}
-
 interface AppConfig {
   /**
    * Current data source mode
@@ -24,9 +19,9 @@ interface AppConfig {
   appName: string
   
   /**
-   * SharePoint configuration (for live mode)
+   * SharePoint site URL (for live mode)
    */
-  sharePoint: SharePointConfig
+  sharePointSiteUrl: string
   
   /**
    * Draft autosave interval in milliseconds
@@ -51,12 +46,7 @@ export const appConfig: AppConfig = {
   dataSourceMode: 'demo',
   
   appName: 'Unterweisungs-App',
-  
-  sharePoint: {
-    siteUrl: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL || '',
-    contentLibrary: 'EHS-Content',
-  },
-  
+  sharePointSiteUrl: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL || '',
   autosaveInterval: 30000, // 30 seconds
   maxParticipants: 100,
   debug: process.env.NODE_ENV === 'development',

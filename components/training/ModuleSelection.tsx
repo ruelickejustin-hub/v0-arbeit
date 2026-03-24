@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Search, ChevronRight } from 'lucide-react'
+import { Search, FileText, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTraining } from '@/src/context/TrainingContext'
 import { getDataProvider } from '@/src/adapters'
@@ -13,7 +14,6 @@ import { cn } from '@/lib/utils'
 /**
  * Format module title for display
  * Handles patterns like "Assembly 1 S. Röleke" -> two lines
- * Also handles long titles with "/" separators
  */
 function formatModuleTitle(title: string): { line1: string; line2?: string } {
   // Check for patterns like "Assembly X Name" or similar
@@ -22,11 +22,11 @@ function formatModuleTitle(title: string): { line1: string; line2?: string } {
     return { line1: assemblyMatch[1], line2: assemblyMatch[2] }
   }
   
-  // Check for very long titles that might benefit from splitting at "/"
-  if (title.length > 45 && title.includes(' / ')) {
+  // Check for very long titles that might benefit from splitting
+  if (title.length > 40 && title.includes(' / ')) {
     const parts = title.split(' / ')
-    if (parts.length >= 2) {
-      return { line1: parts[0], line2: parts.slice(1).join(' / ') }
+    if (parts.length === 2) {
+      return { line1: parts[0], line2: parts[1] }
     }
   }
   
@@ -34,7 +34,7 @@ function formatModuleTitle(title: string): { line1: string; line2?: string } {
 }
 
 /**
- * Module Card Component - Clean, minimal design
+ * Module Card Component
  */
 function ModuleCard({ 
   module, 
@@ -50,9 +50,9 @@ function ModuleCard({
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden transition-all duration-200',
-        'border border-border/60 bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5',
-        isSelected && 'border-primary ring-1 ring-primary/20 bg-primary/[0.02]'
+        'group relative cursor-pointer overflow-hidden border-2 p-5 transition-all duration-200',
+        'hover:border-primary/30 hover:shadow-md',
+        isSelected && 'border-primary bg-primary/5'
       )}
       onClick={() => onSelect(module)}
       role="button"
@@ -64,23 +64,37 @@ function ModuleCard({
         }
       }}
     >
-      <div className="flex items-center gap-4 p-5">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* Module Title - Primary focus */}
-          <h3 className="text-base font-semibold text-foreground leading-snug text-balance">
+          {/* Module ID Badge */}
+          <Badge 
+            variant="secondary" 
+            className="mb-3 text-xs font-medium"
+          >
+            {module.ModuleId}
+          </Badge>
+          
+          {/* Module Title */}
+          <h3 className="text-base font-semibold text-foreground leading-snug">
             {line1}
           </h3>
           {line2 && (
-            <p className="mt-1 text-sm text-muted-foreground leading-snug">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {line2}
             </p>
           )}
+          
+          {/* Content count indicator */}
+          <div className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" />
+            <span>{module.ContentCount} Inhalte</span>
+          </div>
         </div>
         
         {/* Arrow indicator */}
         <div className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200',
-          'bg-muted/50 text-muted-foreground/70',
+          'flex h-8 w-8 items-center justify-center rounded-full transition-all',
+          'bg-secondary text-muted-foreground',
           'group-hover:bg-primary group-hover:text-primary-foreground'
         )}>
           <ChevronRight className="h-4 w-4" />
@@ -103,8 +117,8 @@ function QuarterSection({
   selectedModuleId: string | null
 }) {
   return (
-    <section className="mb-12">
-      <h2 className="mb-5 text-base font-semibold uppercase tracking-wide text-muted-foreground">
+    <section className="mb-10">
+      <h2 className="mb-4 text-lg font-semibold text-foreground">
         {quarter.quarterTitle}
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,17 +143,13 @@ function ModuleSelectionSkeleton() {
     <div className="space-y-10">
       {[1, 2, 3, 4].map((q) => (
         <section key={q}>
-          <Skeleton className="mb-5 h-6 w-44" />
+          <Skeleton className="mb-4 h-7 w-48" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((m) => (
               <Card key={m} className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Skeleton className="mb-2 h-5 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                  <Skeleton className="h-9 w-9 rounded-full shrink-0" />
-                </div>
+                <Skeleton className="mb-3 h-5 w-16" />
+                <Skeleton className="mb-2 h-5 w-full" />
+                <Skeleton className="h-4 w-24" />
               </Card>
             ))}
           </div>
