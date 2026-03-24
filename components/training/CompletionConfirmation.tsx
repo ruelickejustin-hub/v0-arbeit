@@ -171,31 +171,29 @@ function ParticipantStatusRow({
 }
 
 /**
- * Summary Badge
+ * Simple count display
  */
-function SummaryBadge({
-  label,
+function StatusCount({
   count,
+  label,
   variant,
 }: {
-  label: string
   count: number
+  label: string
   variant: 'success' | 'warning' | 'muted'
 }) {
-  const variantClasses = {
-    success: 'bg-success/10 text-success border-success/20',
-    warning: 'bg-warning/10 text-warning border-warning/20',
-    muted: 'bg-muted text-muted-foreground border-muted',
+  if (count === 0) return null
+  
+  const colors = {
+    success: 'text-success',
+    warning: 'text-warning',
+    muted: 'text-muted-foreground',
   }
   
   return (
-    <div className={cn(
-      'flex items-center gap-2 rounded-lg border px-3 py-2',
-      variantClasses[variant]
-    )}>
-      <span className="text-lg font-semibold">{count}</span>
-      <span className="text-sm">{label}</span>
-    </div>
+    <span className={cn('text-sm', colors[variant])}>
+      {count} {label}
+    </span>
   )
 }
 
@@ -532,15 +530,11 @@ export function CompletionConfirmation() {
           {/* Participants with Status Selector */}
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Teilnehmerstatus</CardTitle>
-              <div className="flex items-center gap-2">
-                <SummaryBadge label="Unterwiesen" count={stats.unterwiesen} variant="success" />
-                {stats.nichtErschienen > 0 && (
-                  <SummaryBadge label="Offen" count={stats.nichtErschienen} variant="warning" />
-                )}
-                {stats.entfernt > 0 && (
-                  <SummaryBadge label="Entfernt" count={stats.entfernt} variant="muted" />
-                )}
+              <CardTitle className="text-base">Teilnehmer</CardTitle>
+              <div className="flex items-center gap-3 text-sm">
+                <StatusCount count={stats.unterwiesen} label="unterwiesen" variant="success" />
+                <StatusCount count={stats.nichtErschienen} label="offen" variant="warning" />
+                <StatusCount count={stats.entfernt} label="entfernt" variant="muted" />
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -580,26 +574,8 @@ export function CompletionConfirmation() {
           </Card>
 
           {/* Confirmation */}
-          <Card className="border-2 border-warning/40 bg-warning/5 shadow-md shadow-warning/10">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning text-warning-foreground">
-                  <FileCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">
-                    Bestätigung
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {stats.unterwiesen} Nachweis{stats.unterwiesen !== 1 ? 'e' : ''} werden erstellt.
-                    {stats.nichtErschienen > 0 && (
-                      <> {stats.nichtErschienen} offen.</>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
+          <Card className="border shadow-sm">
+            <CardContent className="p-5">
 
               {/* Validation Warnings */}
               {!canConfirm && (
@@ -620,21 +596,6 @@ export function CompletionConfirmation() {
                   </div>
                 </div>
               )}
-
-              {/* Summary */}
-              <div className="mb-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Nachweisart</span>
-                  <span className="font-medium">Digital bestätigt</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Zeitstempel</span>
-                  <span className="font-medium flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    {new Date().toLocaleString('de-DE')}
-                  </span>
-                </div>
-              </div>
 
               {/* Confirm Button */}
               <AlertDialog>

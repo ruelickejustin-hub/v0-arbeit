@@ -187,7 +187,7 @@ export function ModuleSelection() {
     loadModules()
   }, [])
   
-  // Filter modules based on search
+  // Filter modules based on search (user-facing info only: title, quarter)
   const filteredQuarters = useMemo(() => {
     if (!searchQuery.trim()) return quarters
     
@@ -199,7 +199,7 @@ export function ModuleSelection() {
         modules: quarter.modules.filter(
           (module) =>
             module.ModuleTitle.toLowerCase().includes(query) ||
-            module.ModuleId.toLowerCase().includes(query)
+            quarter.quarterTitle.toLowerCase().includes(query)
         ),
       }))
       .filter((quarter) => quarter.modules.length > 0)

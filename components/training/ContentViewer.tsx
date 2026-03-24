@@ -29,6 +29,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Sheet,
@@ -152,6 +153,9 @@ function VideoPlayerModal({
             <Video className="h-5 w-5 text-destructive" />
             {content.LinkLabel || content.Title}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Video-Player für Unterweisungsinhalte
+          </DialogDescription>
         </DialogHeader>
         <div className="aspect-video bg-black">
           {isYouTube && embedUrl ? (
@@ -633,47 +637,29 @@ export function ContentViewer() {
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="mb-2 flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoBack}
-            className="-ml-2"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Zurück
-          </Button>
-        </div>
-        <h1 className="text-2xl font-bold text-foreground">
-          Unterweisungsinhalte
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleGoBack}
+          className="-ml-2 mb-3"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Zurück
+        </Button>
+        <h1 className="text-xl font-semibold text-foreground">
+          {state.selectedModule?.ModuleTitle}
         </h1>
-        <p className="mt-1 text-muted-foreground">
-          Gehen Sie die Schulungsmaterialien mit den Teilnehmern durch.
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {state.participants.length} Teilnehmer · {new Date(state.trainingDate).toLocaleDateString('de-DE')}
         </p>
       </div>
       
-      {/* Session Info */}
-      <SessionInfoCard />
-      
-      {/* Progress Indicator */}
-      <div className="mb-8">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            {openedCount} von {totalCount}
-          </span>
-          {openedCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetProgress}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <RotateCcw className="mr-1 h-3 w-3" />
-              Zurücksetzen
-            </Button>
-          )}
-        </div>
-        <Progress value={progressPercentage} className="h-2" />
+      {/* Progress */}
+      <div className="mb-6 flex items-center gap-3">
+        <Progress value={progressPercentage} className="h-1.5 flex-1" />
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {openedCount}/{totalCount}
+        </span>
       </div>
       
       {/* Content List */}
@@ -686,42 +672,28 @@ export function ContentViewer() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {/* Main Content (Presentations, Videos) */}
-          {mainContent.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Unterweisung
-              </h2>
-              <div className="grid gap-3">
-                {mainContent.map((content) => {
-                  const url = buildContentUrl(content)
-                  return (
-                    <ContentCard
-                      key={content.id}
-                      content={content}
-                      isOpened={!!state.contentProgress[content.id]}
-                      onAction={() => handleContentAction(content)}
-                      hasUrl={!!url}
-                    />
-                  )
-                })}
-              </div>
-            </section>
-          )}
-          
-          {/* References Section */}
-          {references.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Referenzen
-              </h2>
-              <ReferencesSummaryCard
-                references={references}
-                openedCount={openedRefsCount}
-                onClick={() => setReferencesPanelOpen(true)}
+          {mainContent.map((content) => {
+            const url = buildContentUrl(content)
+            return (
+              <ContentCard
+                key={content.id}
+                content={content}
+                isOpened={!!state.contentProgress[content.id]}
+                onAction={() => handleContentAction(content)}
+                hasUrl={!!url}
               />
-            </section>
+            )
+          })}
+          
+          {/* References */}
+          {references.length > 0 && (
+            <ReferencesSummaryCard
+              references={references}
+              openedCount={openedRefsCount}
+              onClick={() => setReferencesPanelOpen(true)}
+            />
           )}
         </div>
       )}
