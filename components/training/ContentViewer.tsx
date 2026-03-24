@@ -14,6 +14,8 @@ import {
   Download,
   Users,
   Calendar,
+  RotateCcw,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -64,37 +66,46 @@ function getDocTypeColors(docType: DocType): string {
 }
 
 /**
- * Build the content URL
+ * Build the content URL - handles both absolute URLs and relative SharePoint paths
  */
 function buildContentUrl(content: Unterweisungsverweis): string | null {
   const url = content.ServerRelativeUrl
-  if (!url) return null
+  if (!url || url.trim() === '') return null
   
   // Full URL - use directly
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
   }
   
-  // Relative SharePoint path - would be resolved in live mode
-  // In demo mode, we can't open these
-  if (appConfig.dataSourceMode === 'sharepoint' && appConfig.sharePointSiteUrl) {
-    return `${appConfig.sharePointSiteUrl}${url}`
+  // Relative SharePoint path - build full URL
+  if (appConfig.sharePointSiteUrl) {
+    // Ensure proper path joining (avoid double slashes)
+    const baseUrl = appConfig.sharePointSiteUrl.replace(/\/$/, '')
+    const relativePath = url.startsWith('/') ? url : `/${url}`
+    return `${baseUrl}${relativePath}`
+  }
+  
+  // Demo mode fallback - try to open as-is if it looks like a valid path
+  // This allows testing with placeholder URLs
+  if (url.includes('.') || url.includes('/')) {
+    // It might be a relative URL that could work in certain contexts
+    return null
   }
   
   return null
 }
 
 /**
- * Content Card Component - Clean, premium design
+ * Content Card Component - Clean, premium design with toggle capability
  */
 function ContentCard({
   content,
   isOpened,
-  onOpen,
+  onToggle,
 }: {
   content: Unterweisungsverweis
   isOpened: boolean
-  onOpen: () => void
+  onToggle: () => void
 }) {
   const Icon = getDocTypeIcon(content.DocType)
   const colorClasses = getDocTypeColors(content.DocType)
@@ -105,13 +116,20 @@ function ContentCard({
   // Build the actual URL
   const contentUrl = buildContentUrl(content)
   
-  const handleClick = () => {
-    // Try to open real URL if available
+  const handleCardClick = () => {
+    // Open content if URL available
     if (contentUrl) {
       window.open(contentUrl, '_blank', 'noopener,noreferrer')
     }
-    // Mark as opened regardless
-    onOpen()
+    // Mark as opened if not already
+    if (!isOpened) {
+      onToggle()
+    }
+  }
+  
+  const handleToggleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onToggle()
   }
   
   return (
@@ -123,13 +141,13 @@ function ContentCard({
           ? 'border-2 border-success/50 bg-success/5 shadow-sm shadow-success/10' 
           : 'border border-border/60 bg-card hover:border-primary/40 shadow-sm'
       )}
-      onClick={handleClick}
+      onClick={handleCardClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          handleClick()
+          handleCardClick()
         }
       }}
     >
@@ -159,12 +177,16 @@ function ContentCard({
           </h3>
         </div>
         
-        {/* Status / Action indicator */}
+        {/* Status / Action indicator - toggleable when opened */}
         <div className="flex shrink-0 items-center">
           {isOpened ? (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+            <button
+              onClick={handleToggleClick}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground hover:bg-success/80 transition-colors"
+              title="Als nicht geöffnet markieren"
+            >
               <Check className="h-4 w-4" />
-            </div>
+            </button>
           ) : (
             <div className={cn(
               'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
@@ -290,9 +312,14 @@ export function ContentViewer() {
   
   const categories = Object.keys(groupedContent)
   
-  // Handle content open
-  const handleContentOpen = (contentId: string) => {
-    dispatch({ type: 'SET_CONTENT_PROGRESS', contentId, opened: true })
+  // Handle content toggle
+  const handleContentToggle = (contentId: string) => {
+    dispatch({ type: 'TOGGLE_CONTENT_PROGRESS', contentId })
+  }
+  
+  // Reset all content progress
+  const handleResetProgress = () => {
+    dispatch({ type: 'RESET_CONTENT_PROGRESS' })
   }
   
   // Navigation handlers
@@ -343,10 +370,20 @@ export function ContentViewer() {
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Fortschritt</span>
-          <span className="font-medium">
-            {openedCount} von {totalCount} Inhalten geöffnet
+          <span className="text-muted-foreground">
+            {openedCount} von {totalCount}
           </span>
+          {openedCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetProgress}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw className="mr-1 h-3 w-3" />
+              Zurücksetzen
+            </Button>
+          )}
         </div>
         <Progress value={progressPercentage} className="h-2" />
       </div>
@@ -373,7 +410,7 @@ export function ContentViewer() {
                     key={content.id}
                     content={content}
                     isOpened={!!state.contentProgress[content.id]}
-                    onOpen={() => handleContentOpen(content.id)}
+                    onToggle={() => handleContentToggle(content.id)}
                   />
                 ))}
               </div>
@@ -383,12 +420,7 @@ export function ContentViewer() {
       )}
       
       {/* Navigation */}
-      <div className="mt-10 flex items-center justify-between border-t pt-6">
-        <p className="text-sm text-muted-foreground">
-          {progressPercentage < 100
-            ? 'Sie können jederzeit zur Bestätigung übergehen.'
-            : 'Alle Inhalte wurden durchgesehen.'}
-        </p>
+      <div className="mt-10 flex items-center justify-end border-t pt-6">
         <Button size="lg" onClick={handleProceedToCompletion} className="shadow-md">
           Zur Bestätigung
           <ArrowRight className="ml-2 h-4 w-4" />

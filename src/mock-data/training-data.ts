@@ -22,6 +22,7 @@ export const mockVerweise: Unterweisungsverweis[] = [
   // ==========================================================================
   
   // M1: Werkregeln & Sicherheitscharta
+  // Note: Using example URLs for demo mode - in live mode these would be SharePoint paths
   {
     id: generateId(),
     Title: 'Werkregeln & Sicherheitscharta - Präsentation',
@@ -34,7 +35,7 @@ export const mockVerweise: Unterweisungsverweis[] = [
     LinkLabel: 'Präsentation: Werkregeln 2024',
     ShowInTraining: true,
     SortOrder: 1,
-    ServerRelativeUrl: '/sites/ehs/content/Q1/M1/werkregeln-praesentation.pptx',
+    ServerRelativeUrl: 'https://www.osha.gov/sites/default/files/publications/osha3990.pdf',
     LibraryName: 'EHS-Content',
     FolderPath: 'Q1/M1',
     FileName: 'werkregeln-praesentation.pptx',
@@ -52,7 +53,7 @@ export const mockVerweise: Unterweisungsverweis[] = [
     LinkLabel: 'Video: Unsere Sicherheitscharta',
     ShowInTraining: true,
     SortOrder: 2,
-    ServerRelativeUrl: '/sites/ehs/content/Q1/M1/sicherheitscharta-video.mp4',
+    ServerRelativeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     LibraryName: 'EHS-Content',
     FolderPath: 'Q1/M1',
     FileName: 'sicherheitscharta-video.mp4',
@@ -70,7 +71,7 @@ export const mockVerweise: Unterweisungsverweis[] = [
     LinkLabel: 'Dokument: Werkregeln (PDF)',
     ShowInTraining: true,
     SortOrder: 3,
-    ServerRelativeUrl: '/sites/ehs/content/Q1/M1/werkregeln.pdf',
+    ServerRelativeUrl: 'https://www.osha.gov/sites/default/files/publications/OSHA3885.pdf',
     LibraryName: 'EHS-Content',
     FolderPath: 'Q1/M1',
     FileName: 'werkregeln.pdf',

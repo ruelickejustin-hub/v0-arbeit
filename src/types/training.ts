@@ -18,6 +18,54 @@ export const QUARTER_TITLES: Record<QuarterId, string> = {
 }
 
 /**
+ * Quarter accent colors (Tailwind classes)
+ * Q1 = blue (primary), Q2 = green, Q3 = red, Q4 = gold
+ */
+export const QUARTER_COLORS: Record<QuarterId, {
+  accent: string
+  accentBg: string
+  accentBorder: string
+  accentText: string
+}> = {
+  Q1: {
+    accent: 'bg-primary',
+    accentBg: 'bg-primary/5',
+    accentBorder: 'border-primary/30',
+    accentText: 'text-primary',
+  },
+  Q2: {
+    accent: 'bg-success',
+    accentBg: 'bg-success/5',
+    accentBorder: 'border-success/30',
+    accentText: 'text-success',
+  },
+  Q3: {
+    accent: 'bg-destructive',
+    accentBg: 'bg-destructive/5',
+    accentBorder: 'border-destructive/30',
+    accentText: 'text-destructive',
+  },
+  Q4: {
+    accent: 'bg-warning',
+    accentBg: 'bg-warning/5',
+    accentBorder: 'border-warning/30',
+    accentText: 'text-warning',
+  },
+  QX: {
+    accent: 'bg-muted-foreground',
+    accentBg: 'bg-muted/30',
+    accentBorder: 'border-muted-foreground/20',
+    accentText: 'text-muted-foreground',
+  },
+  OUT: {
+    accent: 'bg-muted-foreground',
+    accentBg: 'bg-muted/30',
+    accentBorder: 'border-muted-foreground/20',
+    accentText: 'text-muted-foreground',
+  },
+}
+
+/**
  * Document types for training content
  */
 export type DocType = 'Presentation' | 'Video' | 'Document' | 'Reference' | 'Link'

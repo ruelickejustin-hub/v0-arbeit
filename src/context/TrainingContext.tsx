@@ -71,6 +71,8 @@ type TrainingAction =
   | { type: 'REMOVE_PARTICIPANT'; participantId: string }
   | { type: 'UPDATE_PARTICIPANT'; participant: Participant }
   | { type: 'SET_CONTENT_PROGRESS'; contentId: string; opened: boolean }
+  | { type: 'TOGGLE_CONTENT_PROGRESS'; contentId: string }
+  | { type: 'RESET_CONTENT_PROGRESS' }
   | { type: 'SET_SESSION'; session: Unterweisungstermin }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
@@ -162,6 +164,21 @@ function trainingReducer(state: TrainingState, action: TrainingAction): Training
           ...state.contentProgress,
           [action.contentId]: action.opened,
         },
+      }
+    
+    case 'TOGGLE_CONTENT_PROGRESS':
+      return {
+        ...state,
+        contentProgress: {
+          ...state.contentProgress,
+          [action.contentId]: !state.contentProgress[action.contentId],
+        },
+      }
+    
+    case 'RESET_CONTENT_PROGRESS':
+      return {
+        ...state,
+        contentProgress: {},
       }
     
     case 'SET_SESSION':

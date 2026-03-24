@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTraining } from '@/src/context/TrainingContext'
 import { getDataProvider } from '@/src/adapters'
-import type { QuarterModules, TrainingModule } from '@/src/types/training'
+import type { QuarterModules, TrainingModule, QuarterId } from '@/src/types/training'
+import { QUARTER_COLORS } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 
 /**
@@ -34,27 +35,29 @@ function formatModuleTitle(title: string): { line1: string; line2?: string } {
 }
 
 /**
- * Module Card Component - Clean, premium design with gold selection accent
+ * Module Card Component - Clean, premium design with quarter color accents
  */
 function ModuleCard({ 
   module, 
   onSelect,
-  isSelected 
+  isSelected,
+  quarterColors,
 }: { 
   module: TrainingModule
   onSelect: (module: TrainingModule) => void
   isSelected: boolean
+  quarterColors: typeof QUARTER_COLORS[QuarterId]
 }) {
   const { line1, line2 } = formatModuleTitle(module.ModuleTitle)
   
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden border-2 transition-all duration-200',
+        'group relative cursor-pointer overflow-hidden border transition-all duration-200',
         'hover:shadow-lg',
         isSelected 
-          ? 'border-warning bg-warning/5 shadow-md shadow-warning/10' 
-          : 'border-transparent bg-card shadow-sm hover:border-primary/30 hover:shadow-primary/5'
+          ? `border-2 ${quarterColors.accentBorder} ${quarterColors.accentBg} shadow-md` 
+          : 'border-border/50 bg-card shadow-sm hover:border-border hover:shadow-md'
       )}
       onClick={() => onSelect(module)}
       role="button"
@@ -66,17 +69,14 @@ function ModuleCard({
         }
       }}
     >
-      {/* Selection indicator bar */}
+      {/* Selection indicator bar using quarter color */}
       {isSelected && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning" />
+        <div className={cn('absolute left-0 top-0 bottom-0 w-1', quarterColors.accent)} />
       )}
       
       <div className="flex items-center justify-between gap-4 p-5">
         <div className="flex-1 min-w-0">
-          <h3 className={cn(
-            'text-base font-semibold leading-snug text-balance',
-            isSelected ? 'text-foreground' : 'text-foreground'
-          )}>
+          <h3 className="text-base font-semibold leading-snug text-balance text-foreground">
             {line1}
           </h3>
           {line2 && (
@@ -86,11 +86,11 @@ function ModuleCard({
           )}
         </div>
         
-        {/* Arrow indicator with gold accent when selected */}
+        {/* Arrow indicator with quarter color when selected */}
         <div className={cn(
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
           isSelected
-            ? 'bg-warning text-warning-foreground'
+            ? `${quarterColors.accent} text-white`
             : 'bg-muted/50 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
         )}>
           <ChevronRight className="h-4 w-4" />
@@ -101,7 +101,7 @@ function ModuleCard({
 }
 
 /**
- * Quarter Section Component
+ * Quarter Section Component with quarter-specific color accents
  */
 function QuarterSection({
   quarter,
@@ -112,11 +112,13 @@ function QuarterSection({
   onSelectModule: (module: TrainingModule) => void
   selectedModuleId: string | null
 }) {
+  const quarterColors = QUARTER_COLORS[quarter.quarterId]
+  
   return (
     <section className="mb-10">
       <div className="mb-5 flex items-center gap-3">
-        <div className="h-7 w-1.5 rounded-full bg-primary" />
-        <h2 className="text-lg font-semibold text-foreground">
+        <div className={cn('h-7 w-1.5 rounded-full', quarterColors.accent)} />
+        <h2 className={cn('text-lg font-semibold', quarterColors.accentText)}>
           {quarter.quarterTitle}
         </h2>
       </div>
@@ -127,6 +129,7 @@ function QuarterSection({
             module={module}
             onSelect={onSelectModule}
             isSelected={module.ModuleId === selectedModuleId}
+            quarterColors={quarterColors}
           />
         ))}
       </div>
