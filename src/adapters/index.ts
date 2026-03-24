@@ -1,0 +1,36 @@
+// =============================================================================
+// DATA PROVIDER FACTORY
+// Returns the appropriate data provider based on configuration
+// =============================================================================
+
+import type { IDataProvider } from './IDataProvider'
+import { MockDataProvider } from './MockDataProvider'
+import { SharePointDataProvider } from './SharePointDataProvider'
+import { appConfig, isDemoMode } from '@/src/config/app.config'
+
+/**
+ * Get the configured data provider
+ */
+export function getDataProvider(): IDataProvider {
+  if (isDemoMode()) {
+    return MockDataProvider
+  }
+  
+  // For SharePoint mode, return the SharePoint provider
+  // Note: This will throw errors until SharePoint integration is implemented
+  return SharePointDataProvider
+}
+
+/**
+ * Export individual providers for direct access if needed
+ */
+export { MockDataProvider } from './MockDataProvider'
+export { SharePointDataProvider } from './SharePointDataProvider'
+export type { IDataProvider } from './IDataProvider'
+
+/**
+ * Log current data source mode on module load (development only)
+ */
+if (typeof window !== 'undefined' && appConfig.debug) {
+  console.log(`[EHS App] Data source mode: ${appConfig.dataSourceMode}`)
+}
