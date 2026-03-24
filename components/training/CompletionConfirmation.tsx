@@ -15,6 +15,8 @@ import {
   AlertCircle,
   UserX,
   UserMinus,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,7 +35,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useTraining } from '@/src/context/TrainingContext'
+import { exportNachweiseToCSV, exportNachweiseToXLSX, exportSessionSummaryToXLSX } from '@/src/utils/export'
+import { getDataProvider } from '@/src/adapters'
+import type { Unterweisungsnachweis, Unterweisungstermin } from '@/src/types/training'
 import { getParticipantDisplayName, type AttendanceStatus, type Participant } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -193,9 +204,11 @@ function SummaryBadge({
  */
 function CompletionSuccess({ 
   onNewTraining,
+  onExport,
   stats,
 }: { 
   onNewTraining: () => void
+  onExport: (format: 'csv' | 'xlsx' | 'summary') => void
   stats: { unterwiesen: number; nichtErschienen: number; entfernt: number }
 }) {
   return (
@@ -238,11 +251,36 @@ function CompletionSuccess({
           </CardContent>
         </Card>
         
-        {/* Action */}
-        <Button size="lg" onClick={onNewTraining} className="shadow-md">
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Neue Unterweisung starten
-        </Button>
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg">
+                <Download className="mr-2 h-4 w-4" />
+                Nachweise exportieren
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem onClick={() => onExport('csv')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                CSV-Export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport('xlsx')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel-Export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport('summary')}>
+                <FileCheck className="mr-2 h-4 w-4" />
+                Kompletter Bericht (Excel)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button size="lg" onClick={onNewTraining} className="shadow-md">
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Neue Unterweisung starten
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -282,6 +320,8 @@ export function CompletionConfirmation() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [completionStats, setCompletionStats] = useState({ unterwiesen: 0, nichtErschienen: 0, entfernt: 0 })
+  const [completedNachweise, setCompletedNachweise] = useState<Unterweisungsnachweis[]>([])
+  const [completedTermin, setCompletedTermin] = useState<Unterweisungstermin | null>(null)
 
   // Initialize participant statuses when entering completion screen
   useEffect(() => {
@@ -332,6 +372,15 @@ export function CompletionConfirmation() {
       const success = await completeTraining(notes)
       if (success) {
         setCompletionStats(stats)
+        
+        // Load the created evidence records for export
+        if (state.currentSession) {
+          const provider = getDataProvider()
+          const nachweise = await provider.getNachweiseByTermin(state.currentSession.TerminId)
+          setCompletedNachweise(nachweise)
+          setCompletedTermin(state.currentSession)
+        }
+        
         setIsCompleted(true)
         toast.success('Unterweisung erfolgreich abgeschlossen')
       }
@@ -339,6 +388,36 @@ export function CompletionConfirmation() {
       toast.error('Fehler beim Abschließen der Unterweisung')
     } finally {
       setIsCompleting(false)
+    }
+  }
+  
+  // Handle export
+  const handleExport = async (format: 'csv' | 'xlsx' | 'summary') => {
+    if (completedNachweise.length === 0) {
+      toast.error('Keine Nachweise zum Exportieren vorhanden')
+      return
+    }
+    
+    try {
+      switch (format) {
+        case 'csv':
+          exportNachweiseToCSV(completedNachweise, completedTermin || undefined)
+          toast.success('CSV-Export erstellt')
+          break
+        case 'xlsx':
+          await exportNachweiseToXLSX(completedNachweise, completedTermin || undefined)
+          toast.success('Excel-Export erstellt')
+          break
+        case 'summary':
+          if (completedTermin) {
+            await exportSessionSummaryToXLSX(completedTermin, completedNachweise)
+            toast.success('Bericht erstellt')
+          }
+          break
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Export fehlgeschlagen')
     }
   }
 
@@ -356,7 +435,13 @@ export function CompletionConfirmation() {
 
   // Show success state if completed
   if (isCompleted) {
-    return <CompletionSuccess onNewTraining={handleNewTraining} stats={completionStats} />
+    return (
+      <CompletionSuccess 
+        onNewTraining={handleNewTraining} 
+        onExport={handleExport}
+        stats={completionStats} 
+      />
+    )
   }
 
   return (

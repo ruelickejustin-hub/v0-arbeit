@@ -1,15 +1,15 @@
 // =============================================================================
 // APP CONFIGURATION
-// Switch between demo mode and live SharePoint integration
+// Standalone Web App for EHS Training Management
 // =============================================================================
 
-export type DataSourceMode = 'demo' | 'sharepoint'
+export type DataSourceMode = 'standalone' | 'sharepoint'
 
 interface AppConfig {
   /**
    * Current data source mode
-   * - 'demo': Uses mock data for testing and demonstration
-   * - 'sharepoint': Uses SharePoint/Graph API for live data
+   * - 'standalone': Web app with local storage and file imports (default)
+   * - 'sharepoint': Optional SharePoint integration for document links
    */
   dataSourceMode: DataSourceMode
   
@@ -19,7 +19,12 @@ interface AppConfig {
   appName: string
   
   /**
-   * SharePoint site URL (for live mode)
+   * Company/Organization name
+   */
+  companyName: string
+  
+  /**
+   * SharePoint site URL (optional - for document links only)
    */
   sharePointSiteUrl: string
   
@@ -37,31 +42,46 @@ interface AppConfig {
    * Enable debug logging
    */
   debug: boolean
+  
+  /**
+   * Current training year
+   */
+  trainingYear: number
 }
 
 export const appConfig: AppConfig = {
   // ==========================================================================
-  // CHANGE THIS TO 'sharepoint' WHEN READY FOR LIVE INTEGRATION
+  // STANDALONE WEB APP MODE
+  // SharePoint is only used optionally for document links
   // ==========================================================================
-  dataSourceMode: 'demo',
+  dataSourceMode: 'standalone',
   
   appName: 'Unterweisungs-App',
+  companyName: 'EHS Training',
   sharePointSiteUrl: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL || '',
   autosaveInterval: 30000, // 30 seconds
   maxParticipants: 100,
   debug: process.env.NODE_ENV === 'development',
+  trainingYear: 2026,
 }
 
 /**
- * Check if running in demo mode
+ * Check if running in standalone mode (default)
  */
-export function isDemoMode(): boolean {
-  return appConfig.dataSourceMode === 'demo'
+export function isStandaloneMode(): boolean {
+  return appConfig.dataSourceMode === 'standalone'
 }
 
 /**
- * Check if running in SharePoint live mode
+ * Check if SharePoint URL is configured
  */
-export function isSharePointMode(): boolean {
-  return appConfig.dataSourceMode === 'sharepoint'
+export function hasSharePointConfig(): boolean {
+  return !!appConfig.sharePointSiteUrl
+}
+
+/**
+ * Get training year prefix for module IDs
+ */
+export function getTrainingYearPrefix(): string {
+  return String(appConfig.trainingYear)
 }

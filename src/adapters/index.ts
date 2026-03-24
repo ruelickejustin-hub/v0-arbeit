@@ -6,13 +6,14 @@
 import type { IDataProvider } from './IDataProvider'
 import { MockDataProvider } from './MockDataProvider'
 import { SharePointDataProvider } from './SharePointDataProvider'
-import { appConfig, isDemoMode } from '@/src/config/app.config'
+import { appConfig, isStandaloneMode } from '@/src/config/app.config'
 
 /**
  * Get the configured data provider
+ * In standalone mode (default), uses MockDataProvider with local storage
  */
 export function getDataProvider(): IDataProvider {
-  if (isDemoMode()) {
+  if (isStandaloneMode()) {
     return MockDataProvider
   }
   
