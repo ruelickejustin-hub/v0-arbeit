@@ -7,7 +7,7 @@ import {
   Presentation,
   Link as LinkIcon,
   ExternalLink,
-  CheckCircle,
+  Check,
   ArrowLeft,
   ArrowRight,
   Play,
@@ -17,14 +17,13 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { useTraining } from '@/src/context/TrainingContext'
 import { getDataProvider } from '@/src/adapters'
+import { appConfig } from '@/src/config/app.config'
 import type { Unterweisungsverweis, DocType } from '@/src/types/training'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 /**
  * Get icon for document type
@@ -46,26 +45,43 @@ function getDocTypeIcon(docType: DocType) {
 }
 
 /**
- * Get color classes for document type
+ * Get subtle color classes for document type icons
  */
 function getDocTypeColors(docType: DocType): string {
   switch (docType) {
     case 'Presentation':
-      return 'bg-primary/10 text-primary'
+      return 'bg-primary/8 text-primary'
     case 'Video':
-      return 'bg-destructive/10 text-destructive'
+      return 'bg-destructive/8 text-destructive'
     case 'Document':
-      return 'bg-success/10 text-success'
+      return 'bg-success/8 text-success'
     case 'Reference':
     case 'Link':
-      return 'bg-warning/10 text-warning'
+      return 'bg-warning/8 text-warning'
     default:
       return 'bg-muted text-muted-foreground'
   }
 }
 
 /**
- * Content Card Component
+ * Build a usable URL from content data
+ */
+function buildContentUrl(content: Unterweisungsverweis): string | null {
+  // Check if it's already a full URL
+  if (content.ServerRelativeUrl?.startsWith('http')) {
+    return content.ServerRelativeUrl
+  }
+  
+  // For relative SharePoint paths, build the full URL
+  if (content.ServerRelativeUrl && appConfig.sharePoint.siteUrl) {
+    return `${appConfig.sharePoint.siteUrl}${content.ServerRelativeUrl}`
+  }
+  
+  return null
+}
+
+/**
+ * Content Card Component - Clean, minimal design
  */
 function ContentCard({
   content,
@@ -79,15 +95,19 @@ function ContentCard({
   const Icon = getDocTypeIcon(content.DocType)
   const colorClasses = getDocTypeColors(content.DocType)
   
-  // Get display title (prefer LinkLabel, then FileName)
+  // Get display title (prefer LinkLabel, then FileName, then Title)
   const displayTitle = content.LinkLabel || content.FileName || content.Title
   
-  // Build the URL - in demo mode, show a toast; in live mode, use actual URL
+  // Handle content click - open URL if available, otherwise just mark as opened
   const handleClick = () => {
-    // In demo mode, we simulate opening
-    toast.info(`Inhalt geöffnet: ${displayTitle}`, {
-      description: 'In der Live-Version wird der Inhalt in einem neuen Tab geöffnet.',
-    })
+    const url = buildContentUrl(content)
+    
+    if (url) {
+      // Open the actual URL in a new tab
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+    
+    // Mark as opened regardless
     onOpen()
   }
   
@@ -95,8 +115,8 @@ function ContentCard({
     <Card
       className={cn(
         'group relative cursor-pointer overflow-hidden transition-all duration-200',
-        'hover:shadow-md hover:border-primary/30',
-        isOpened && 'border-success/50 bg-success/5'
+        'border border-border/50 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5',
+        isOpened && 'bg-success/[0.03] border-success/30'
       )}
       onClick={handleClick}
       role="button"
@@ -108,15 +128,16 @@ function ContentCard({
         }
       }}
     >
-      <CardContent className="flex items-start gap-4 p-4">
+      <CardContent className="flex items-center gap-4 p-4">
         {/* Icon */}
         <div
           className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200',
+            'group-hover:scale-105',
             colorClasses
           )}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className="h-5 w-5" />
         </div>
         
         {/* Content */}
@@ -124,24 +145,21 @@ function ContentCard({
           <h3 className="font-medium text-foreground leading-snug text-balance">
             {displayTitle}
           </h3>
-          {content.DocCategory && (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {content.DocCategory}
-            </p>
-          )}
         </div>
         
-        {/* Status / Action */}
-        <div className="flex items-center gap-2">
+        {/* Status indicator */}
+        <div className="shrink-0">
           {isOpened ? (
-            <div className="flex items-center gap-1.5 text-sm text-success">
-              <CheckCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Geöffnet</span>
+            <div className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-full',
+              'bg-success/10 text-success'
+            )}>
+              <Check className="h-4 w-4" />
             </div>
           ) : (
             <div className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-              'bg-secondary text-muted-foreground',
+              'flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200',
+              'bg-muted/50 text-muted-foreground/60',
               'group-hover:bg-primary group-hover:text-primary-foreground'
             )}>
               {content.DocType === 'Video' ? (
@@ -181,31 +199,25 @@ function ContentViewerSkeleton() {
 }
 
 /**
- * Session Info Card
+ * Session Info Bar - Minimal context display
  */
-function SessionInfoCard() {
+function SessionInfoBar() {
   const { state } = useTraining()
   
   return (
-    <Card className="mb-6 bg-primary/5 border-primary/20">
-      <CardContent className="flex flex-wrap items-center gap-4 p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Badge variant="secondary">{state.selectedModule?.ModuleId}</Badge>
-          <span className="font-medium">{state.selectedModule?.ModuleTitle}</span>
-        </div>
-        <div className="h-4 w-px bg-border hidden sm:block" />
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
-            {new Date(state.trainingDate).toLocaleDateString('de-DE')}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Users className="h-4 w-4" />
-            {state.participants.length} Teilnehmer
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">
+        {state.selectedModule?.ModuleTitle}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <Calendar className="h-4 w-4" />
+        {new Date(state.trainingDate).toLocaleDateString('de-DE')}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <Users className="h-4 w-4" />
+        {state.participants.length} Teilnehmer
+      </span>
+    </div>
   )
 }
 
@@ -313,17 +325,17 @@ export function ContentViewer() {
       </div>
       
       {/* Session Info */}
-      <SessionInfoCard />
+      <SessionInfoBar />
       
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Fortschritt</span>
-          <span className="font-medium">
-            {openedCount} von {totalCount} Inhalten geöffnet
+          <span className="font-medium text-foreground">
+            {openedCount} / {totalCount}
           </span>
         </div>
-        <Progress value={progressPercentage} className="h-2" />
+        <Progress value={progressPercentage} className="h-1.5" />
       </div>
       
       {/* Content List */}
@@ -358,12 +370,7 @@ export function ContentViewer() {
       )}
       
       {/* Navigation */}
-      <div className="mt-10 flex items-center justify-between border-t pt-6">
-        <p className="text-sm text-muted-foreground">
-          {progressPercentage < 100
-            ? 'Sie können jederzeit zur Bestätigung übergehen.'
-            : 'Alle Inhalte wurden durchgesehen.'}
-        </p>
+      <div className="mt-10 flex items-center justify-end border-t pt-6">
         <Button size="lg" onClick={handleProceedToCompletion}>
           Zur Bestätigung
           <ArrowRight className="ml-2 h-4 w-4" />

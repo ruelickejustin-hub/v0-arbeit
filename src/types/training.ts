@@ -13,8 +13,8 @@ export const QUARTER_TITLES: Record<QuarterId, string> = {
   Q2: 'Q2 – Sicher arbeiten',
   Q3: 'Q3 – Sicher handeln',
   Q4: 'Q4 – Sicher abschließen',
-  QX: 'Quartalsübergreifend',
-  OUT: 'Außerhalb EHS-Quartalsplan',
+  QX: 'Basis & Vorlagen',
+  OUT: 'Weitere Themen',
 }
 
 /**

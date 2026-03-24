@@ -441,11 +441,16 @@ export function ParticipantsEntry() {
           </p>
         </div>
         
-        {/* Selected Module Badge */}
+        {/* Selected Module Indicator */}
         {state.selectedModule && (
-          <Badge variant="outline" className="text-sm">
-            {state.selectedModule.ModuleTitle}
-          </Badge>
+          <div className="text-right">
+            <p className="text-sm font-medium text-foreground">
+              {state.selectedModule.ModuleTitle}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {state.selectedModule.QuarterTitle}
+            </p>
+          </div>
         )}
       </div>
 
