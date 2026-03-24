@@ -1,6 +1,6 @@
 // =============================================================================
-// STANDALONE DATA PROVIDER
-// Provides local storage-based data for standalone operation
+// MOCK DATA PROVIDER
+// Provides demo data for testing and demonstration
 // =============================================================================
 
 import type {
@@ -20,17 +20,8 @@ import type {
 } from '@/src/types/training'
 import { QUARTER_TITLES } from '@/src/types/training'
 import { mockVerweise } from '@/src/mock-data/training-data'
-import { getStorageKey } from '@/src/config/app.config'
 
-// Storage keys
-const STORAGE_KEYS = {
-  termine: getStorageKey('termine'),
-  nachweise: getStorageKey('nachweise'),
-  drafts: getStorageKey('drafts'),
-  counters: getStorageKey('counters'),
-}
-
-// In-memory storage (hydrated from localStorage)
+// In-memory storage for demo mode
 let termine: Unterweisungstermin[] = []
 let nachweise: Unterweisungsnachweis[] = []
 let drafts: TrainingDraft[] = []
@@ -38,64 +29,6 @@ let drafts: TrainingDraft[] = []
 // Counter for generating IDs
 let terminCounter = 1
 let nachweisCounter = 1
-
-/**
- * Load data from localStorage
- */
-function hydrateFromStorage(): void {
-  if (typeof window === 'undefined') return
-  
-  try {
-    const storedTermine = localStorage.getItem(STORAGE_KEYS.termine)
-    if (storedTermine) termine = JSON.parse(storedTermine)
-    
-    const storedNachweise = localStorage.getItem(STORAGE_KEYS.nachweise)
-    if (storedNachweise) nachweise = JSON.parse(storedNachweise)
-    
-    const storedDrafts = localStorage.getItem(STORAGE_KEYS.drafts)
-    if (storedDrafts) drafts = JSON.parse(storedDrafts)
-    
-    const storedCounters = localStorage.getItem(STORAGE_KEYS.counters)
-    if (storedCounters) {
-      const counters = JSON.parse(storedCounters)
-      terminCounter = counters.terminCounter || 1
-      nachweisCounter = counters.nachweisCounter || 1
-    }
-  } catch (e) {
-    console.error('Failed to hydrate from storage:', e)
-  }
-}
-
-/**
- * Save termine to localStorage
- */
-function persistTermine(): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEYS.termine, JSON.stringify(termine))
-  localStorage.setItem(STORAGE_KEYS.counters, JSON.stringify({ terminCounter, nachweisCounter }))
-}
-
-/**
- * Save nachweise to localStorage
- */
-function persistNachweise(): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEYS.nachweise, JSON.stringify(nachweise))
-  localStorage.setItem(STORAGE_KEYS.counters, JSON.stringify({ terminCounter, nachweisCounter }))
-}
-
-/**
- * Save drafts to localStorage
- */
-function persistDrafts(): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEYS.drafts, JSON.stringify(drafts))
-}
-
-// Hydrate on module load (client-side only)
-if (typeof window !== 'undefined') {
-  hydrateFromStorage()
-}
 
 /**
  * Generate a unique Termin ID
@@ -237,7 +170,6 @@ export const MockDataProvider: IDataProvider = {
     }
     
     termine.push(newTermin)
-    persistTermine()
     return newTermin
   },
   
@@ -258,7 +190,6 @@ export const MockDataProvider: IDataProvider = {
       UpdatedAt: new Date().toISOString(),
     }
     
-    persistTermine()
     return termine[index]
   },
   
@@ -313,7 +244,6 @@ export const MockDataProvider: IDataProvider = {
     }
     
     nachweise.push(newNachweis)
-    persistNachweise()
     return newNachweis
   },
   
@@ -327,7 +257,6 @@ export const MockDataProvider: IDataProvider = {
       results.push(nachweis)
     }
     
-    persistNachweise()
     return results
   },
   
@@ -345,44 +274,46 @@ export const MockDataProvider: IDataProvider = {
       drafts.push({ ...draft, updatedAt: new Date().toISOString() })
     }
     
-    persistDrafts()
+    // Persist to localStorage for demo mode persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ehs_training_drafts', JSON.stringify(drafts))
+    }
   },
   
   async loadDraft(draftId: string): Promise<TrainingDraft | null> {
     await new Promise(resolve => setTimeout(resolve, 50))
-    hydrateFromStorage()
+    
+    // Load from localStorage if available
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ehs_training_drafts')
+      if (stored) {
+        drafts = JSON.parse(stored)
+      }
+    }
+    
     return drafts.find(d => d.id === draftId) || null
   },
   
   async deleteDraft(draftId: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 50))
+    
     drafts = drafts.filter(d => d.id !== draftId)
-    persistDrafts()
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ehs_training_drafts', JSON.stringify(drafts))
+    }
   },
   
   async listDrafts(): Promise<TrainingDraft[]> {
     await new Promise(resolve => setTimeout(resolve, 50))
-    hydrateFromStorage()
+    
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ehs_training_drafts')
+      if (stored) {
+        drafts = JSON.parse(stored)
+      }
+    }
+    
     return drafts
-  },
-  
-  // ===========================================================================
-  // EXPORT HELPERS
-  // ===========================================================================
-  
-  /**
-   * Get all nachweise for export
-   */
-  async getAllNachweise(): Promise<Unterweisungsnachweis[]> {
-    hydrateFromStorage()
-    return nachweise
-  },
-  
-  /**
-   * Get all termine for export
-   */
-  async getAllTermine(): Promise<Unterweisungstermin[]> {
-    hydrateFromStorage()
-    return termine
   },
 }
