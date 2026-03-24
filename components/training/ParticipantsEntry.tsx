@@ -13,6 +13,7 @@ import {
   Users,
   FileSpreadsheet,
   FileText,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +35,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useTraining } from '@/src/context/TrainingContext'
 import { 
   useFileImport, 
@@ -43,6 +52,7 @@ import {
   SUPPORTED_EXTENSIONS,
 } from '@/src/hooks/useFileImport'
 import type { Participant } from '@/src/types/training'
+import { getParticipantDisplayName } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -53,18 +63,6 @@ type EntryMode = 'manual' | 'file'
  */
 function generateParticipantId(): string {
   return `p-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-}
-
-/**
- * Empty participant template
- */
-function createEmptyParticipant(): Participant {
-  return {
-    id: generateParticipantId(),
-    ParticipantName: '',
-    PersonnelNo: '',
-    Department: '',
-  }
 }
 
 /**
@@ -106,6 +104,123 @@ function ModeSwitch({
         Datei-Import
       </button>
     </div>
+  )
+}
+
+/**
+ * Add Participant Modal Dialog
+ */
+function AddParticipantDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAdd: (participant: Participant) => void
+}) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [alpsId, setAlpsId] = useState('')
+  const [department, setDepartment] = useState('')
+  
+  const resetForm = () => {
+    setFirstName('')
+    setLastName('')
+    setAlpsId('')
+    setDepartment('')
+  }
+  
+  const handleSubmit = () => {
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error('Vorname und Nachname sind erforderlich')
+      return
+    }
+    
+    const participant: Participant = {
+      id: generateParticipantId(),
+      FirstName: firstName.trim(),
+      LastName: lastName.trim(),
+      AlpsId: alpsId.trim(),
+      Department: department.trim(),
+    }
+    
+    onAdd(participant)
+    resetForm()
+    onOpenChange(false)
+    toast.success('Teilnehmer hinzugefügt')
+  }
+  
+  const handleCancel = () => {
+    resetForm()
+    onOpenChange(false)
+  }
+  
+  const isValid = firstName.trim().length > 0 && lastName.trim().length > 0
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Teilnehmer hinzufügen</DialogTitle>
+          <DialogDescription>
+            Erfassen Sie die Daten des Teilnehmers.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <FieldGroup className="gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel htmlFor="firstName">Vorname *</FieldLabel>
+              <Input
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Max"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="lastName">Nachname *</FieldLabel>
+              <Input
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Mustermann"
+              />
+            </Field>
+          </div>
+          <Field>
+            <FieldLabel htmlFor="alpsId">ALPS ID</FieldLabel>
+            <Input
+              id="alpsId"
+              value={alpsId}
+              onChange={(e) => setAlpsId(e.target.value)}
+              placeholder="A12345"
+              className="font-mono"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="department">Abteilung</FieldLabel>
+            <Input
+              id="department"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="Produktion"
+            />
+          </Field>
+        </FieldGroup>
+        
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={handleCancel}>
+            Abbrechen
+          </Button>
+          <Button onClick={handleSubmit} disabled={!isValid}>
+            Übernehmen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -286,8 +401,9 @@ function FileImportArea({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">Zeile</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Personalnr.</TableHead>
+                <TableHead>Vorname</TableHead>
+                <TableHead>Nachname</TableHead>
+                <TableHead>ALPS ID</TableHead>
                 <TableHead>Abteilung</TableHead>
                 <TableHead className="w-20">Status</TableHead>
               </TableRow>
@@ -301,9 +417,10 @@ function FileImportArea({
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {row.rowNumber}
                   </TableCell>
-                  <TableCell>{row.ParticipantName || '-'}</TableCell>
+                  <TableCell>{row.FirstName || '-'}</TableCell>
+                  <TableCell>{row.LastName || '-'}</TableCell>
                   <TableCell className="font-mono">
-                    {row.PersonnelNo || '-'}
+                    {row.AlpsId || '-'}
                   </TableCell>
                   <TableCell>{row.Department || '-'}</TableCell>
                   <TableCell>
@@ -340,17 +457,15 @@ function FileImportArea({
 }
 
 /**
- * Manual Entry Area Component
+ * Manual Entry Area Component - Shows participant list with add button
  */
 function ManualEntryArea({
   participants,
-  onAdd,
-  onUpdate,
+  onOpenAddDialog,
   onRemove,
 }: {
   participants: Participant[]
-  onAdd: () => void
-  onUpdate: (participant: Participant) => void
+  onOpenAddDialog: () => void
   onRemove: (id: string) => void
 }) {
   if (participants.length === 0) {
@@ -365,7 +480,7 @@ function ManualEntryArea({
         <p className="mb-4 text-sm text-muted-foreground">
           Fügen Sie Teilnehmer einzeln hinzu.
         </p>
-        <Button onClick={onAdd}>
+        <Button onClick={onOpenAddDialog}>
           <UserPlus className="mr-2 h-4 w-4" />
           Teilnehmer hinzufügen
         </Button>
@@ -380,8 +495,8 @@ function ManualEntryArea({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">#</TableHead>
-              <TableHead>Name *</TableHead>
-              <TableHead>Personalnr.</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>ALPS ID</TableHead>
               <TableHead>Abteilung</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -392,35 +507,14 @@ function ManualEntryArea({
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {index + 1}
                 </TableCell>
-                <TableCell>
-                  <Input
-                    value={participant.ParticipantName}
-                    onChange={(e) =>
-                      onUpdate({ ...participant, ParticipantName: e.target.value })
-                    }
-                    placeholder="Name eingeben"
-                    className="h-9"
-                  />
+                <TableCell className="font-medium">
+                  {getParticipantDisplayName(participant)}
                 </TableCell>
-                <TableCell>
-                  <Input
-                    value={participant.PersonnelNo}
-                    onChange={(e) =>
-                      onUpdate({ ...participant, PersonnelNo: e.target.value })
-                    }
-                    placeholder="Personalnr."
-                    className="h-9 font-mono"
-                  />
+                <TableCell className="font-mono text-sm">
+                  {participant.AlpsId || '-'}
                 </TableCell>
-                <TableCell>
-                  <Input
-                    value={participant.Department}
-                    onChange={(e) =>
-                      onUpdate({ ...participant, Department: e.target.value })
-                    }
-                    placeholder="Abteilung"
-                    className="h-9"
-                  />
+                <TableCell className="text-muted-foreground">
+                  {participant.Department || '-'}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -438,7 +532,7 @@ function ManualEntryArea({
         </Table>
       </div>
       
-      <Button variant="outline" onClick={onAdd}>
+      <Button variant="outline" onClick={onOpenAddDialog}>
         <UserPlus className="mr-2 h-4 w-4" />
         Weiteren Teilnehmer hinzufügen
       </Button>
@@ -453,11 +547,7 @@ export function ParticipantsEntry() {
   const { state, dispatch, canProceedToContent, createSession } = useTraining()
   const [entryMode, setEntryMode] = useState<EntryMode>('manual')
   const [isCreatingSession, setIsCreatingSession] = useState(false)
-
-  // Switch to manual mode after import to show results
-  const handleModeChange = (mode: EntryMode) => {
-    setEntryMode(mode)
-  }
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   // Session metadata handlers
   const handleTrainerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -481,12 +571,8 @@ export function ParticipantsEntry() {
   }
 
   // Participant handlers
-  const handleAddParticipant = () => {
-    dispatch({ type: 'ADD_PARTICIPANT', participant: createEmptyParticipant() })
-  }
-
-  const handleUpdateParticipant = (participant: Participant) => {
-    dispatch({ type: 'UPDATE_PARTICIPANT', participant })
+  const handleAddParticipant = (participant: Participant) => {
+    dispatch({ type: 'ADD_PARTICIPANT', participant })
   }
 
   const handleRemoveParticipant = (id: string) => {
@@ -514,7 +600,7 @@ export function ParticipantsEntry() {
         dispatch({ type: 'SET_STEP', step: 'content' })
         toast.success('Unterweisung gestartet')
       }
-    } catch (error) {
+    } catch {
       toast.error('Fehler beim Starten der Unterweisung')
     } finally {
       setIsCreatingSession(false)
@@ -524,7 +610,7 @@ export function ParticipantsEntry() {
   // Validation
   const isTrainerValid = state.trainer.trim().length > 0
   const hasValidParticipants = state.participants.some(
-    (p) => p.ParticipantName.trim().length > 0
+    (p) => p.FirstName.trim().length > 0 && p.LastName.trim().length > 0
   )
 
   return (
@@ -623,7 +709,7 @@ export function ParticipantsEntry() {
                 </Badge>
               )}
             </div>
-            <ModeSwitch value={entryMode} onChange={handleModeChange} />
+            <ModeSwitch value={entryMode} onChange={setEntryMode} />
           </div>
         </CardHeader>
         <CardContent>
@@ -632,38 +718,38 @@ export function ParticipantsEntry() {
           ) : (
             <ManualEntryArea
               participants={state.participants}
-              onAdd={handleAddParticipant}
-              onUpdate={handleUpdateParticipant}
+              onOpenAddDialog={() => setIsAddDialogOpen(true)}
               onRemove={handleRemoveParticipant}
             />
           )}
         </CardContent>
       </Card>
 
-      {/* Proceed Button */}
-      <div className="mt-8 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {!isTrainerValid && <span>Unterweiser erforderlich</span>}
-          {isTrainerValid && !hasValidParticipants && (
-            <span>Mindestens ein Teilnehmer mit Namen erforderlich</span>
-          )}
-        </div>
+      {/* Navigation */}
+      <div className="mt-8 flex items-center justify-end gap-4">
         <Button
           size="lg"
-          disabled={!canProceedToContent || !hasValidParticipants || isCreatingSession}
           onClick={handleProceedToContent}
+          disabled={!canProceedToContent || isCreatingSession}
           className="shadow-md"
         >
           {isCreatingSession ? (
-            'Starte Unterweisung...'
+            'Wird gestartet...'
           ) : (
             <>
-              Weiter zu Inhalten
+              Weiter zur Unterweisung
               <ArrowRight className="ml-2 h-4 w-4" />
             </>
           )}
         </Button>
       </div>
+
+      {/* Add Participant Dialog */}
+      <AddParticipantDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAdd={handleAddParticipant}
+      />
     </div>
   )
 }

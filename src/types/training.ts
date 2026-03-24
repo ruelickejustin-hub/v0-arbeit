@@ -152,8 +152,9 @@ export interface Unterweisungsnachweis {
   TerminId: string
   ModuleId: string
   ModuleTitle: string
-  ParticipantName: string
-  PersonnelNo: string
+  FirstName: string
+  LastName: string
+  AlpsId: string
   Department: string
   AttendanceStatus: AttendanceStatus
   ConfirmedByTrainer: boolean
@@ -184,22 +185,36 @@ export interface TrainingModule {
  */
 export interface Participant {
   id: string
-  ParticipantName: string
-  PersonnelNo: string
+  FirstName: string
+  LastName: string
+  AlpsId: string
   Department: string
 }
 
 /**
- * CSV import row
+ * Helper to get display name from participant
  */
-export interface CSVParticipantRow {
-  ParticipantName?: string
-  PersonnelNo?: string
+export function getParticipantDisplayName(participant: Participant): string {
+  return `${participant.FirstName} ${participant.LastName}`.trim()
+}
+
+/**
+ * CSV/XLSX import row
+ */
+export interface ImportParticipantRow {
+  FirstName?: string
+  LastName?: string
+  AlpsId?: string
   Department?: string
   rowNumber: number
   isValid: boolean
   errors: string[]
 }
+
+/**
+ * @deprecated Use ImportParticipantRow instead
+ */
+export type CSVParticipantRow = ImportParticipantRow
 
 /**
  * Training session draft for autosave

@@ -223,15 +223,18 @@ export const MockDataProvider: IDataProvider = {
     const nachweisId = generateNachweisId(params.terminId, nachweisCounter)
     const now = new Date().toISOString()
     
+    const displayName = `${params.participant.FirstName} ${params.participant.LastName}`.trim()
+    
     const newNachweis: Unterweisungsnachweis = {
       id: nachweisId,
-      Title: `${params.participant.ParticipantName} - ${params.moduleTitle}`,
+      Title: `${displayName} - ${params.moduleTitle}`,
       NachweisId: nachweisId,
       TerminId: params.terminId,
       ModuleId: params.moduleId,
       ModuleTitle: params.moduleTitle,
-      ParticipantName: params.participant.ParticipantName,
-      PersonnelNo: params.participant.PersonnelNo,
+      FirstName: params.participant.FirstName,
+      LastName: params.participant.LastName,
+      AlpsId: params.participant.AlpsId,
       Department: params.participant.Department,
       AttendanceStatus: 'Unterwiesen',
       ConfirmedByTrainer: params.confirmedByTrainer,

@@ -7,13 +7,13 @@
 // =============================================================================
 
 import { useState, useCallback } from 'react'
-import type { Participant, CSVParticipantRow } from '@/src/types/training'
+import type { Participant, ImportParticipantRow } from '@/src/types/training'
 
 interface UseFileImportReturn {
   // State
-  parsedRows: CSVParticipantRow[]
-  validRows: CSVParticipantRow[]
-  invalidRows: CSVParticipantRow[]
+  parsedRows: ImportParticipantRow[]
+  validRows: ImportParticipantRow[]
+  invalidRows: ImportParticipantRow[]
   isProcessing: boolean
   error: string | null
   fileName: string | null
@@ -27,15 +27,15 @@ interface UseFileImportReturn {
 /**
  * Template header (same for CSV and XLSX)
  */
-export const TEMPLATE_HEADER = ['ParticipantName', 'PersonnelNo', 'Department']
+export const TEMPLATE_HEADER = ['FirstName', 'LastName', 'AlpsId', 'Department']
 
 /**
  * CSV Template content (for download)
  */
-export const CSV_TEMPLATE = `ParticipantName;PersonnelNo;Department
-Max Mustermann;12345;Produktion
-Erika Musterfrau;12346;Logistik
-Hans Schmidt;12347;Montage`
+export const CSV_TEMPLATE = `FirstName;LastName;AlpsId;Department
+Max;Mustermann;A12345;Produktion
+Erika;Musterfrau;A12346;Logistik
+Hans;Schmidt;A12347;Montage`
 
 /**
  * Download CSV template
@@ -57,9 +57,9 @@ export async function downloadXLSXTemplate() {
   
   const templateData = [
     TEMPLATE_HEADER,
-    ['Max Mustermann', '12345', 'Produktion'],
-    ['Erika Musterfrau', '12346', 'Logistik'],
-    ['Hans Schmidt', '12347', 'Montage'],
+    ['Max', 'Mustermann', 'A12345', 'Produktion'],
+    ['Erika', 'Musterfrau', 'A12346', 'Logistik'],
+    ['Hans', 'Schmidt', 'A12347', 'Montage'],
   ]
   
   const worksheet = XLSX.utils.aoa_to_sheet(templateData)
@@ -68,8 +68,9 @@ export async function downloadXLSXTemplate() {
   
   // Set column widths
   worksheet['!cols'] = [
-    { wch: 25 }, // ParticipantName
-    { wch: 15 }, // PersonnelNo
+    { wch: 15 }, // FirstName
+    { wch: 20 }, // LastName
+    { wch: 12 }, // AlpsId
     { wch: 20 }, // Department
   ]
   
@@ -116,11 +117,15 @@ async function parseXLSXContent(buffer: ArrayBuffer): Promise<string[][]> {
  */
 function isHeaderRow(row: string[]): boolean {
   const firstCell = row[0]?.toLowerCase() || ''
+  const secondCell = row[1]?.toLowerCase() || ''
   return (
-    firstCell.includes('name') ||
-    firstCell.includes('participant') ||
-    firstCell === 'participantname' ||
-    firstCell === 'teilnehmer'
+    firstCell.includes('first') ||
+    firstCell.includes('vorname') ||
+    firstCell === 'firstname' ||
+    secondCell.includes('last') ||
+    secondCell.includes('nachname') ||
+    secondCell === 'lastname' ||
+    firstCell.includes('name')
   )
 }
 
@@ -130,27 +135,32 @@ function isHeaderRow(row: string[]): boolean {
 function validateRow(
   row: string[],
   rowNumber: number,
-  existingPersonnelNos: Set<string>
-): CSVParticipantRow {
+  existingAlpsIds: Set<string>
+): ImportParticipantRow {
   const errors: string[] = []
   
-  const participantName = row[0]?.trim() || ''
-  const personnelNo = row[1]?.trim() || ''
-  const department = row[2]?.trim() || ''
+  const firstName = row[0]?.trim() || ''
+  const lastName = row[1]?.trim() || ''
+  const alpsId = row[2]?.trim() || ''
+  const department = row[3]?.trim() || ''
   
   // Check required fields
-  if (!participantName) {
-    errors.push('Name fehlt')
+  if (!firstName) {
+    errors.push('Vorname fehlt')
+  }
+  if (!lastName) {
+    errors.push('Nachname fehlt')
   }
   
-  // Personnel number is optional but if present, check for duplicates
-  if (personnelNo && existingPersonnelNos.has(personnelNo)) {
-    errors.push('Personalnummer bereits vorhanden')
+  // AlpsId is optional but if present, check for duplicates
+  if (alpsId && existingAlpsIds.has(alpsId)) {
+    errors.push('ALPS ID bereits vorhanden')
   }
   
   return {
-    ParticipantName: participantName,
-    PersonnelNo: personnelNo,
+    FirstName: firstName,
+    LastName: lastName,
+    AlpsId: alpsId,
     Department: department,
     rowNumber,
     isValid: errors.length === 0,
@@ -182,7 +192,7 @@ function getFileExtension(filename: string): string {
  * File Import Hook - supports both CSV and XLSX
  */
 export function useFileImport(): UseFileImportReturn {
-  const [parsedRows, setParsedRows] = useState<CSVParticipantRow[]>([])
+  const [parsedRows, setParsedRows] = useState<ImportParticipantRow[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -224,9 +234,9 @@ export function useFileImport(): UseFileImportReturn {
         return
       }
       
-      // Track personnel numbers for duplicate detection
-      const personnelNos = new Set<string>()
-      const validatedRows: CSVParticipantRow[] = []
+      // Track ALPS IDs for duplicate detection
+      const alpsIds = new Set<string>()
+      const validatedRows: ImportParticipantRow[] = []
       
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i]
@@ -237,11 +247,11 @@ export function useFileImport(): UseFileImportReturn {
         }
         
         const rowNumber = hasHeader ? i + 2 : i + 1 // Account for header row
-        const validatedRow = validateRow(row, rowNumber, personnelNos)
+        const validatedRow = validateRow(row, rowNumber, alpsIds)
         
-        // Add to tracked personnel numbers
-        if (validatedRow.PersonnelNo) {
-          personnelNos.add(validatedRow.PersonnelNo)
+        // Add to tracked ALPS IDs
+        if (validatedRow.AlpsId) {
+          alpsIds.add(validatedRow.AlpsId)
         }
         
         validatedRows.push(validatedRow)
@@ -272,8 +282,9 @@ export function useFileImport(): UseFileImportReturn {
       .filter(row => row.isValid)
       .map(row => ({
         id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        ParticipantName: row.ParticipantName || '',
-        PersonnelNo: row.PersonnelNo || '',
+        FirstName: row.FirstName || '',
+        LastName: row.LastName || '',
+        AlpsId: row.AlpsId || '',
         Department: row.Department || '',
       }))
   }, [parsedRows])

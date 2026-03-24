@@ -40,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useTraining } from '@/src/context/TrainingContext'
+import { getParticipantDisplayName } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -124,7 +125,7 @@ export function CompletionConfirmation() {
 
   // Check if we can complete
   const validParticipants = state.participants.filter(
-    (p) => p.ParticipantName.trim().length > 0
+    (p) => p.FirstName.trim().length > 0 && p.LastName.trim().length > 0
   )
   
   const canConfirm =
@@ -269,7 +270,7 @@ export function CompletionConfirmation() {
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Personalnr.</TableHead>
+                      <TableHead>ALPS ID</TableHead>
                       <TableHead>Abteilung</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -280,10 +281,10 @@ export function CompletionConfirmation() {
                           {index + 1}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {participant.ParticipantName}
+                          {getParticipantDisplayName(participant)}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {participant.PersonnelNo || '-'}
+                          {participant.AlpsId || '-'}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {participant.Department || '-'}
