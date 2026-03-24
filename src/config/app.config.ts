@@ -1,15 +1,15 @@
 // =============================================================================
 // APP CONFIGURATION
-// Switch between demo mode and live SharePoint integration
+// Standalone training app - runs independently, optionally links to SharePoint
 // =============================================================================
 
-export type DataSourceMode = 'demo' | 'sharepoint'
+export type DataSourceMode = 'standalone' | 'sharepoint'
 
 interface AppConfig {
   /**
    * Current data source mode
-   * - 'demo': Uses mock data for testing and demonstration
-   * - 'sharepoint': Uses SharePoint/Graph API for live data
+   * - 'standalone': Eigenständige App mit lokalem Storage und Import/Export
+   * - 'sharepoint': Optionale SharePoint-Anbindung für Dokumente
    */
   dataSourceMode: DataSourceMode
   
@@ -19,7 +19,7 @@ interface AppConfig {
   appName: string
   
   /**
-   * SharePoint site URL (for live mode)
+   * Optional SharePoint site URL (for document links)
    */
   sharePointSiteUrl: string
   
@@ -37,31 +37,44 @@ interface AppConfig {
    * Enable debug logging
    */
   debug: boolean
+  
+  /**
+   * Local storage key prefix
+   */
+  storagePrefix: string
 }
 
 export const appConfig: AppConfig = {
   // ==========================================================================
-  // CHANGE THIS TO 'sharepoint' WHEN READY FOR LIVE INTEGRATION
+  // STANDALONE MODE - Unabhängig von SharePoint, mit Import/Export
   // ==========================================================================
-  dataSourceMode: 'demo',
+  dataSourceMode: 'standalone',
   
   appName: 'Unterweisungs-App',
   sharePointSiteUrl: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL || '',
   autosaveInterval: 30000, // 30 seconds
   maxParticipants: 100,
   debug: process.env.NODE_ENV === 'development',
+  storagePrefix: 'ehs_training_',
 }
 
 /**
- * Check if running in demo mode
+ * Check if running in standalone mode
  */
-export function isDemoMode(): boolean {
-  return appConfig.dataSourceMode === 'demo'
+export function isStandaloneMode(): boolean {
+  return appConfig.dataSourceMode === 'standalone'
 }
 
 /**
- * Check if running in SharePoint live mode
+ * Check if running in SharePoint mode
  */
 export function isSharePointMode(): boolean {
   return appConfig.dataSourceMode === 'sharepoint'
+}
+
+/**
+ * Get storage key with prefix
+ */
+export function getStorageKey(key: string): string {
+  return `${appConfig.storagePrefix}${key}`
 }

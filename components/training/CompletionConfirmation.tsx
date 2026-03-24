@@ -15,6 +15,8 @@ import {
   AlertCircle,
   UserX,
   UserMinus,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +36,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useTraining } from '@/src/context/TrainingContext'
-import { getParticipantDisplayName, type AttendanceStatus, type Participant } from '@/src/types/training'
+import { getParticipantDisplayName, type AttendanceStatus, type Participant, type Unterweisungsnachweis } from '@/src/types/training'
+import { exportNachweiseToCSV, exportNachweiseToXLSX, downloadCSV } from '@/src/utils/export'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -189,15 +192,41 @@ function SummaryBadge({
 }
 
 /**
- * Success State Component
+ * Success State Component with Export
  */
 function CompletionSuccess({ 
   onNewTraining,
   stats,
+  nachweise,
+  moduleName,
 }: { 
   onNewTraining: () => void
   stats: { unterwiesen: number; nichtErschienen: number; entfernt: number }
+  nachweise: Unterweisungsnachweis[]
+  moduleName: string
 }) {
+  const [isExporting, setIsExporting] = useState(false)
+  
+  const handleExportCSV = () => {
+    const csv = exportNachweiseToCSV(nachweise)
+    const dateStr = new Date().toISOString().split('T')[0]
+    const filename = `Nachweise_${moduleName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}.csv`
+    downloadCSV(csv, filename)
+    toast.success('CSV-Export erfolgreich')
+  }
+  
+  const handleExportXLSX = async () => {
+    setIsExporting(true)
+    try {
+      await exportNachweiseToXLSX(nachweise)
+      toast.success('Excel-Export erfolgreich')
+    } catch {
+      toast.error('Export fehlgeschlagen')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+  
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
@@ -237,6 +266,25 @@ function CompletionSuccess({
             </div>
           </CardContent>
         </Card>
+        
+        {/* Export Options */}
+        {nachweise.length > 0 && (
+          <Card className="mb-8 text-left">
+            <CardContent className="p-4">
+              <p className="mb-3 text-sm font-medium text-foreground">Nachweise exportieren</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                  <Download className="mr-2 h-4 w-4" />
+                  CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportXLSX} disabled={isExporting}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {isExporting ? 'Exportiert...' : 'Excel'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {/* Action */}
         <Button size="lg" onClick={onNewTraining} className="shadow-md">
@@ -282,6 +330,7 @@ export function CompletionConfirmation() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [completionStats, setCompletionStats] = useState({ unterwiesen: 0, nichtErschienen: 0, entfernt: 0 })
+  const [completedNachweise, setCompletedNachweise] = useState<Unterweisungsnachweis[]>([])
 
   // Initialize participant statuses when entering completion screen
   useEffect(() => {
@@ -332,6 +381,30 @@ export function CompletionConfirmation() {
       const success = await completeTraining(notes)
       if (success) {
         setCompletionStats(stats)
+        
+        // Create nachweise records for export
+        const now = new Date().toISOString()
+        const nachweise: Unterweisungsnachweis[] = validParticipants
+          .filter(p => state.participantStatuses[p.id] !== 'Entfernt')
+          .map((p, index) => ({
+            id: `N-${Date.now()}-${index}`,
+            Title: `${getParticipantDisplayName(p)} - ${state.selectedModule?.ModuleTitle}`,
+            NachweisId: `N-${Date.now()}-${index}`,
+            TerminId: state.currentSession?.TerminId || '',
+            ModuleId: state.selectedModule?.ModuleId || '',
+            ModuleTitle: state.selectedModule?.ModuleTitle || '',
+            FirstName: p.FirstName,
+            LastName: p.LastName,
+            AlpsId: p.AlpsId,
+            Department: p.Department,
+            AttendanceStatus: state.participantStatuses[p.id] || 'Unterwiesen',
+            ConfirmedByTrainer: true,
+            ConfirmationTimestamp: now,
+            EvidenceType: 'Digital bestätigt' as const,
+            Notes: notes,
+          }))
+        
+        setCompletedNachweise(nachweise)
         setIsCompleted(true)
         toast.success('Unterweisung erfolgreich abgeschlossen')
       }
@@ -347,6 +420,7 @@ export function CompletionConfirmation() {
     resetTraining()
     setIsCompleted(false)
     setNotes('')
+    setCompletedNachweise([])
   }
 
   // Navigate back
@@ -356,7 +430,14 @@ export function CompletionConfirmation() {
 
   // Show success state if completed
   if (isCompleted) {
-    return <CompletionSuccess onNewTraining={handleNewTraining} stats={completionStats} />
+    return (
+      <CompletionSuccess 
+        onNewTraining={handleNewTraining} 
+        stats={completionStats}
+        nachweise={completedNachweise}
+        moduleName={state.selectedModule?.ModuleTitle || 'Unterweisung'}
+      />
+    )
   }
 
   return (
