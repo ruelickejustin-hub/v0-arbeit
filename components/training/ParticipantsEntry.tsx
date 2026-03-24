@@ -11,21 +11,12 @@ import {
   ArrowLeft,
   ArrowRight,
   Users,
-  X,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -41,6 +32,8 @@ import { useCSVImport, downloadCSVTemplate } from '@/src/hooks/useCSVImport'
 import type { Participant } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+
+type EntryMode = 'manual' | 'csv'
 
 /**
  * Generate unique participant ID
@@ -62,15 +55,53 @@ function createEmptyParticipant(): Participant {
 }
 
 /**
- * CSV Import Dialog
+ * Mode Switch Component - Segmented control for entry mode
  */
-function CSVImportDialog({
-  open,
-  onOpenChange,
+function ModeSwitch({ 
+  value, 
+  onChange 
+}: { 
+  value: EntryMode
+  onChange: (mode: EntryMode) => void 
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
+      <button
+        type="button"
+        onClick={() => onChange('manual')}
+        className={cn(
+          'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all',
+          value === 'manual'
+            ? 'bg-card text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <UserPlus className="h-4 w-4" />
+        Manuell
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('csv')}
+        className={cn(
+          'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all',
+          value === 'csv'
+            ? 'bg-card text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <FileSpreadsheet className="h-4 w-4" />
+        CSV-Import
+      </button>
+    </div>
+  )
+}
+
+/**
+ * CSV Import Area Component
+ */
+function CSVImportArea({
   onImport,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   onImport: (participants: Participant[]) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -111,233 +142,255 @@ function CSVImportDialog({
     if (participants.length > 0) {
       onImport(participants)
       clearImport()
-      onOpenChange(false)
       toast.success(`${participants.length} Teilnehmer importiert`)
     }
-  }, [getValidParticipants, onImport, clearImport, onOpenChange])
+  }, [getValidParticipants, onImport, clearImport])
 
-  const handleClose = useCallback(() => {
-    clearImport()
-    onOpenChange(false)
-  }, [clearImport, onOpenChange])
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Teilnehmer aus CSV importieren</DialogTitle>
-          <DialogDescription>
-            Laden Sie eine CSV-Datei mit Teilnehmerdaten hoch.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* File Upload Area */}
-        {parsedRows.length === 0 && (
-          <div
-            className={cn(
-              'rounded-lg border-2 border-dashed p-8 text-center transition-colors',
-              'hover:border-primary/50 hover:bg-muted/50',
-              isProcessing && 'pointer-events-none opacity-50'
-            )}
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-          >
-            <Upload className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-            <p className="mb-2 text-sm text-foreground">
-              CSV-Datei hier ablegen oder{' '}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Datei auswählen
-              </button>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Unterstützte Trennzeichen: Semikolon (;) oder Komma (,)
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+  // No file uploaded yet - show upload area
+  if (parsedRows.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div
+          className={cn(
+            'rounded-xl border-2 border-dashed p-8 text-center transition-all',
+            'hover:border-primary/40 hover:bg-primary/5',
+            isProcessing && 'pointer-events-none opacity-50'
+          )}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+        >
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+            <Upload className="h-7 w-7 text-primary" />
           </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {error}
-          </div>
-        )}
-
-        {/* Import Preview */}
-        {parsedRows.length > 0 && (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="flex items-center gap-4">
-              <Badge
-                variant="secondary"
-                className="gap-1.5 bg-success/10 text-success"
-              >
-                <CheckCircle className="h-3 w-3" />
-                {validRows.length} gültig
-              </Badge>
-              {invalidRows.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="gap-1.5 bg-destructive/10 text-destructive"
-                >
-                  <AlertCircle className="h-3 w-3" />
-                  {invalidRows.length} ungültig
-                </Badge>
-              )}
-            </div>
-
-            {/* Preview Table */}
-            <ScrollArea className="h-64 rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Zeile</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Personalnr.</TableHead>
-                    <TableHead>Abteilung</TableHead>
-                    <TableHead className="w-24">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedRows.map((row) => (
-                    <TableRow
-                      key={row.rowNumber}
-                      className={cn(!row.isValid && 'bg-destructive/5')}
-                    >
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {row.rowNumber}
-                      </TableCell>
-                      <TableCell>{row.ParticipantName || '-'}</TableCell>
-                      <TableCell className="font-mono">
-                        {row.PersonnelNo || '-'}
-                      </TableCell>
-                      <TableCell>{row.Department || '-'}</TableCell>
-                      <TableCell>
-                        {row.isValid ? (
-                          <CheckCircle className="h-4 w-4 text-success" />
-                        ) : (
-                          <span
-                            className="text-xs text-destructive"
-                            title={row.errors.join(', ')}
-                          >
-                            {row.errors[0]}
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between">
-              <Button variant="outline" size="sm" onClick={clearImport}>
-                Andere Datei
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                {validRows.length} von {parsedRows.length} Zeilen werden
-                importiert
-              </p>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={downloadCSVTemplate}
-            className="mr-auto"
-          >
+          <p className="mb-2 text-base font-medium text-foreground">
+            CSV-Datei hierher ziehen
+          </p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            oder{' '}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Datei auswählen
+            </button>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Trennzeichen: Semikolon (;) oder Komma (,)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
+        
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={downloadCSVTemplate}>
             <Download className="mr-2 h-4 w-4" />
-            Vorlage
+            CSV-Vorlage herunterladen
           </Button>
-          <Button variant="outline" onClick={handleClose}>
-            Abbrechen
-          </Button>
-          <Button
-            onClick={handleImport}
-            disabled={validRows.length === 0}
-          >
-            {validRows.length} Teilnehmer importieren
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    )
+  }
+
+  // File uploaded - show preview
+  return (
+    <div className="space-y-4">
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Summary */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="gap-1.5 bg-success/10 text-success border-success/20">
+            <CheckCircle className="h-3 w-3" />
+            {validRows.length} gültig
+          </Badge>
+          {invalidRows.length > 0 && (
+            <Badge variant="secondary" className="gap-1.5 bg-destructive/10 text-destructive border-destructive/20">
+              <AlertCircle className="h-3 w-3" />
+              {invalidRows.length} ungültig
+            </Badge>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={clearImport}>
+          Andere Datei
+        </Button>
+      </div>
+
+      {/* Preview Table */}
+      <div className="rounded-lg border">
+        <ScrollArea className="h-56">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">Zeile</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Personalnr.</TableHead>
+                <TableHead>Abteilung</TableHead>
+                <TableHead className="w-20">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {parsedRows.map((row) => (
+                <TableRow
+                  key={row.rowNumber}
+                  className={cn(!row.isValid && 'bg-destructive/5')}
+                >
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {row.rowNumber}
+                  </TableCell>
+                  <TableCell>{row.ParticipantName || '-'}</TableCell>
+                  <TableCell className="font-mono">
+                    {row.PersonnelNo || '-'}
+                  </TableCell>
+                  <TableCell>{row.Department || '-'}</TableCell>
+                  <TableCell>
+                    {row.isValid ? (
+                      <CheckCircle className="h-4 w-4 text-success" />
+                    ) : (
+                      <span
+                        className="text-xs text-destructive"
+                        title={row.errors.join(', ')}
+                      >
+                        {row.errors[0]}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </div>
+
+      {/* Import Action */}
+      <div className="flex items-center justify-between pt-2">
+        <p className="text-sm text-muted-foreground">
+          {validRows.length} von {parsedRows.length} Zeilen werden importiert
+        </p>
+        <Button onClick={handleImport} disabled={validRows.length === 0}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          {validRows.length} Teilnehmer übernehmen
+        </Button>
+      </div>
+    </div>
   )
 }
 
 /**
- * Participant Row Component
+ * Manual Entry Area Component
  */
-function ParticipantRow({
-  participant,
-  index,
+function ManualEntryArea({
+  participants,
+  onAdd,
   onUpdate,
   onRemove,
 }: {
-  participant: Participant
-  index: number
+  participants: Participant[]
+  onAdd: () => void
   onUpdate: (participant: Participant) => void
-  onRemove: () => void
+  onRemove: (id: string) => void
 }) {
-  return (
-    <TableRow>
-      <TableCell className="font-mono text-xs text-muted-foreground">
-        {index + 1}
-      </TableCell>
-      <TableCell>
-        <Input
-          value={participant.ParticipantName}
-          onChange={(e) =>
-            onUpdate({ ...participant, ParticipantName: e.target.value })
-          }
-          placeholder="Name eingeben"
-          className="h-8"
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          value={participant.PersonnelNo}
-          onChange={(e) =>
-            onUpdate({ ...participant, PersonnelNo: e.target.value })
-          }
-          placeholder="Personalnr."
-          className="h-8 font-mono"
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          value={participant.Department}
-          onChange={(e) =>
-            onUpdate({ ...participant, Department: e.target.value })
-          }
-          placeholder="Abteilung"
-          className="h-8"
-        />
-      </TableCell>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
+  if (participants.length === 0) {
+    return (
+      <div className="rounded-xl border-2 border-dashed p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
+          <Users className="h-7 w-7 text-muted-foreground" />
+        </div>
+        <p className="mb-2 text-base font-medium text-foreground">
+          Noch keine Teilnehmer erfasst
+        </p>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Fügen Sie Teilnehmer einzeln hinzu.
+        </p>
+        <Button onClick={onAdd}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Teilnehmer hinzufügen
         </Button>
-      </TableCell>
-    </TableRow>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">#</TableHead>
+              <TableHead>Name *</TableHead>
+              <TableHead>Personalnr.</TableHead>
+              <TableHead>Abteilung</TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {participants.map((participant, index) => (
+              <TableRow key={participant.id}>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {index + 1}
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={participant.ParticipantName}
+                    onChange={(e) =>
+                      onUpdate({ ...participant, ParticipantName: e.target.value })
+                    }
+                    placeholder="Name eingeben"
+                    className="h-9"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={participant.PersonnelNo}
+                    onChange={(e) =>
+                      onUpdate({ ...participant, PersonnelNo: e.target.value })
+                    }
+                    placeholder="Personalnr."
+                    className="h-9 font-mono"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={participant.Department}
+                    onChange={(e) =>
+                      onUpdate({ ...participant, Department: e.target.value })
+                    }
+                    placeholder="Abteilung"
+                    className="h-9"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemove(participant.id)}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      
+      <Button variant="outline" onClick={onAdd}>
+        <UserPlus className="mr-2 h-4 w-4" />
+        Weiteren Teilnehmer hinzufügen
+      </Button>
+    </div>
   )
 }
 
@@ -346,7 +399,7 @@ function ParticipantRow({
  */
 export function ParticipantsEntry() {
   const { state, dispatch, canProceedToContent, createSession } = useTraining()
-  const [isCSVDialogOpen, setIsCSVDialogOpen] = useState(false)
+  const [entryMode, setEntryMode] = useState<EntryMode>('manual')
   const [isCreatingSession, setIsCreatingSession] = useState(false)
 
   // Session metadata handlers
@@ -385,6 +438,8 @@ export function ParticipantsEntry() {
 
   const handleImportParticipants = (participants: Participant[]) => {
     dispatch({ type: 'SET_PARTICIPANTS', participants: [...state.participants, ...participants] })
+    // Switch to manual mode to show the list
+    setEntryMode('manual')
   }
 
   // Navigation handlers
@@ -411,15 +466,13 @@ export function ParticipantsEntry() {
 
   // Validation
   const isTrainerValid = state.trainer.trim().length > 0
-  const isDateValid = state.trainingDate.length > 0
-  const hasParticipants = state.participants.length > 0
   const hasValidParticipants = state.participants.some(
     (p) => p.ParticipantName.trim().length > 0
   )
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header with back button */}
+      {/* Header */}
       <div className="mb-8">
         <div className="mb-2 flex items-center gap-2">
           <Button
@@ -441,9 +494,9 @@ export function ParticipantsEntry() {
       </div>
 
       {/* Session Metadata */}
-      <Card className="mb-6">
+      <Card className="mb-6 border-2 border-transparent shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">Unterweisungsdaten</CardTitle>
+          <CardTitle className="text-base font-semibold">Unterweisungsdaten</CardTitle>
         </CardHeader>
         <CardContent>
           <FieldGroup className="gap-4">
@@ -501,82 +554,31 @@ export function ParticipantsEntry() {
       </Card>
 
       {/* Participants Section */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between pb-4">
-          <div className="flex items-center gap-3">
-            <CardTitle className="text-base">Teilnehmer</CardTitle>
-            {state.participants.length > 0 && (
-              <Badge variant="secondary">
-                <Users className="mr-1 h-3 w-3" />
-                {state.participants.length}
-              </Badge>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCSVDialogOpen(true)}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              CSV Import
-            </Button>
-            <Button size="sm" onClick={handleAddParticipant}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Hinzufügen
-            </Button>
+      <Card className="border-2 border-transparent shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-base font-semibold">Teilnehmer</CardTitle>
+              {state.participants.length > 0 && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  <Users className="mr-1 h-3 w-3" />
+                  {state.participants.length}
+                </Badge>
+              )}
+            </div>
+            <ModeSwitch value={entryMode} onChange={setEntryMode} />
           </div>
         </CardHeader>
         <CardContent>
-          {state.participants.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <Users className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-              <p className="mb-1 font-medium text-foreground">
-                Keine Teilnehmer erfasst
-              </p>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Fügen Sie Teilnehmer manuell hinzu oder importieren Sie eine
-                CSV-Datei.
-              </p>
-              <div className="flex justify-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCSVDialogOpen(true)}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  CSV Import
-                </Button>
-                <Button onClick={handleAddParticipant}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Manuell hinzufügen
-                </Button>
-              </div>
-            </div>
+          {entryMode === 'csv' ? (
+            <CSVImportArea onImport={handleImportParticipants} />
           ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Name *</TableHead>
-                    <TableHead>Personalnr.</TableHead>
-                    <TableHead>Abteilung</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {state.participants.map((participant, index) => (
-                    <ParticipantRow
-                      key={participant.id}
-                      participant={participant}
-                      index={index}
-                      onUpdate={handleUpdateParticipant}
-                      onRemove={() => handleRemoveParticipant(participant.id)}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <ManualEntryArea
+              participants={state.participants}
+              onAdd={handleAddParticipant}
+              onUpdate={handleUpdateParticipant}
+              onRemove={handleRemoveParticipant}
+            />
           )}
         </CardContent>
       </Card>
@@ -593,6 +595,7 @@ export function ParticipantsEntry() {
           size="lg"
           disabled={!canProceedToContent || !hasValidParticipants || isCreatingSession}
           onClick={handleProceedToContent}
+          className="shadow-md"
         >
           {isCreatingSession ? (
             'Starte Unterweisung...'
@@ -604,13 +607,6 @@ export function ParticipantsEntry() {
           )}
         </Button>
       </div>
-
-      {/* CSV Import Dialog */}
-      <CSVImportDialog
-        open={isCSVDialogOpen}
-        onOpenChange={setIsCSVDialogOpen}
-        onImport={handleImportParticipants}
-      />
     </div>
   )
 }

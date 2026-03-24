@@ -19,24 +19,22 @@ export function AppHeader() {
   const currentStepIndex = STEPS.indexOf(state.currentStep)
   
   return (
-    <header className="sticky top-0 z-50 bg-primary text-primary-foreground">
+    <header className="sticky top-0 z-50 border-b border-primary/20 bg-primary text-primary-foreground shadow-lg shadow-primary/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-foreground/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
               <Shield className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="text-lg font-semibold leading-tight">
-                Unterweisungs-App
-              </h1>
-            </div>
+            <h1 className="text-lg font-semibold tracking-tight">
+              Unterweisungs-App
+            </h1>
           </div>
           
           {/* Step Indicator */}
           <nav className="hidden sm:block" aria-label="Progress">
-            <ol className="flex items-center gap-2">
+            <ol className="flex items-center">
               {STEPS.map((step, index) => {
                 const isActive = index === currentStepIndex
                 const isCompleted = index < currentStepIndex
@@ -46,29 +44,28 @@ export function AppHeader() {
                     {index > 0 && (
                       <div 
                         className={cn(
-                          'mx-2 h-px w-6',
-                          isCompleted ? 'bg-primary-foreground/60' : 'bg-primary-foreground/20'
+                          'mx-1 h-px w-8 transition-colors',
+                          isCompleted ? 'bg-white/50' : 'bg-white/15'
                         )}
                       />
                     )}
                     <div
                       className={cn(
-                        'flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-                        isActive && 'bg-primary-foreground/20',
-                        isCompleted && 'text-primary-foreground/80',
-                        !isActive && !isCompleted && 'text-primary-foreground/50'
+                        'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                        isActive && 'bg-white/15 shadow-sm',
+                        !isActive && 'opacity-70 hover:opacity-90'
                       )}
                     >
                       <span
                         className={cn(
-                          'flex h-5 w-5 items-center justify-center rounded-full text-xs',
-                          isActive && 'bg-primary-foreground text-primary',
-                          isCompleted && 'bg-primary-foreground/60 text-primary',
-                          !isActive && !isCompleted && 'bg-primary-foreground/20'
+                          'flex h-6 w-6 items-center justify-center rounded-md text-xs font-semibold transition-all',
+                          isActive && 'bg-white text-primary shadow-sm',
+                          isCompleted && 'bg-success text-success-foreground',
+                          !isActive && !isCompleted && 'bg-white/20 text-white'
                         )}
                       >
                         {isCompleted ? (
-                          <CheckIcon className="h-3 w-3" />
+                          <CheckIcon className="h-3.5 w-3.5" />
                         ) : (
                           index + 1
                         )}
@@ -84,11 +81,21 @@ export function AppHeader() {
           </nav>
           
           {/* Mobile Step Indicator */}
-          <div className="flex items-center gap-2 sm:hidden">
-            <span className="text-sm font-medium text-primary-foreground/80">
-              {currentStepIndex + 1}/{STEPS.length}
-            </span>
-            <span className="text-sm">
+          <div className="flex items-center gap-3 sm:hidden">
+            <div className="flex items-center gap-1">
+              {STEPS.map((_, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full transition-all',
+                    index === currentStepIndex && 'w-4 bg-white',
+                    index < currentStepIndex && 'bg-success',
+                    index > currentStepIndex && 'bg-white/30'
+                  )}
+                />
+              ))}
+            </div>
+            <span className="text-sm font-medium">
               {STEP_LABELS[state.currentStep]}
             </span>
           </div>

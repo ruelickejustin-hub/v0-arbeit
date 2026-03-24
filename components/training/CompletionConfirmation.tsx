@@ -51,25 +51,26 @@ function CompletionSuccess({ onNewTraining }: { onNewTraining: () => void }) {
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
         {/* Success Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
-          <CheckCircle className="h-10 w-10 text-success" />
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-success shadow-lg shadow-success/20">
+          <CheckCircle className="h-12 w-12 text-success-foreground" />
         </div>
         
         {/* Success Message */}
-        <h1 className="mb-2 text-2xl font-bold text-foreground">
+        <h1 className="mb-3 text-2xl font-bold text-foreground">
           Unterweisung abgeschlossen
         </h1>
-        <p className="mb-8 text-muted-foreground">
+        <p className="mb-8 text-lg text-muted-foreground">
           Die Unterweisung wurde erfolgreich dokumentiert.
+          <br />
           Alle Nachweise wurden erstellt.
         </p>
         
         {/* Summary Card */}
-        <Card className="mb-8 text-left">
+        <Card className="mb-8 text-left border-2 border-success/30 bg-success/5">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <FileCheck className="h-5 w-5 text-success" />
-              <span>
+            <div className="flex items-center gap-3 text-success">
+              <FileCheck className="h-5 w-5" />
+              <span className="font-medium">
                 Nachweise wurden digital bestätigt und gespeichert.
               </span>
             </div>
@@ -77,7 +78,7 @@ function CompletionSuccess({ onNewTraining }: { onNewTraining: () => void }) {
         </Card>
         
         {/* Action */}
-        <Button size="lg" onClick={onNewTraining}>
+        <Button size="lg" onClick={onNewTraining} className="shadow-md">
           <RotateCcw className="mr-2 h-4 w-4" />
           Neue Unterweisung starten
         </Button>
@@ -100,12 +101,12 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <Icon className="h-4 w-4 text-primary" />
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-medium">{value || '-'}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="font-medium text-foreground">{value || '-'}</p>
       </div>
     </div>
   )
@@ -195,10 +196,12 @@ export function CompletionConfirmation() {
         {/* Left Column - Summary */}
         <div className="lg:col-span-2 space-y-6">
           {/* Module Info */}
-          <Card>
+          <Card className="border-2 border-primary/20 bg-primary/5">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Shield className="h-4 w-4" />
+                </div>
                 <CardTitle className="text-base">Unterweisungsmodul</CardTitle>
               </div>
             </CardHeader>
@@ -313,11 +316,11 @@ export function CompletionConfirmation() {
           </Card>
 
           {/* Confirmation */}
-          <Card className="border-primary/30 bg-primary/5">
+          <Card className="border-2 border-warning/40 bg-warning/5 shadow-md shadow-warning/10">
             <CardContent className="p-6">
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <FileCheck className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning text-warning-foreground">
+                  <FileCheck className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">
@@ -370,7 +373,7 @@ export function CompletionConfirmation() {
                 <AlertDialogTrigger asChild>
                   <Button
                     size="lg"
-                    className="w-full"
+                    className="w-full bg-success hover:bg-success/90 shadow-md"
                     disabled={!canConfirm || isCompleting}
                   >
                     {isCompleting ? (

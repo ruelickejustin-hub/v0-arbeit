@@ -34,7 +34,7 @@ function formatModuleTitle(title: string): { line1: string; line2?: string } {
 }
 
 /**
- * Module Card Component - Clean, premium design
+ * Module Card Component - Clean, premium design with gold selection accent
  */
 function ModuleCard({ 
   module, 
@@ -50,11 +50,11 @@ function ModuleCard({
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden border transition-all duration-200',
-        'hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5',
+        'group relative cursor-pointer overflow-hidden border-2 transition-all duration-200',
+        'hover:shadow-lg',
         isSelected 
-          ? 'border-primary bg-primary/5 shadow-md' 
-          : 'border-border/60 bg-card'
+          ? 'border-warning bg-warning/5 shadow-md shadow-warning/10' 
+          : 'border-transparent bg-card shadow-sm hover:border-primary/30 hover:shadow-primary/5'
       )}
       onClick={() => onSelect(module)}
       role="button"
@@ -66,9 +66,17 @@ function ModuleCard({
         }
       }}
     >
+      {/* Selection indicator bar */}
+      {isSelected && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning" />
+      )}
+      
       <div className="flex items-center justify-between gap-4 p-5">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-foreground leading-snug text-balance">
+          <h3 className={cn(
+            'text-base font-semibold leading-snug text-balance',
+            isSelected ? 'text-foreground' : 'text-foreground'
+          )}>
             {line1}
           </h3>
           {line2 && (
@@ -78,12 +86,12 @@ function ModuleCard({
           )}
         </div>
         
-        {/* Subtle arrow indicator */}
+        {/* Arrow indicator with gold accent when selected */}
         <div className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200',
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
           isSelected
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
+            ? 'bg-warning text-warning-foreground'
+            : 'bg-muted/50 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
         )}>
           <ChevronRight className="h-4 w-4" />
         </div>
@@ -106,9 +114,12 @@ function QuarterSection({
 }) {
   return (
     <section className="mb-10">
-      <h2 className="mb-4 text-lg font-semibold text-foreground">
-        {quarter.quarterTitle}
-      </h2>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="h-7 w-1.5 rounded-full bg-primary" />
+        <h2 className="text-lg font-semibold text-foreground">
+          {quarter.quarterTitle}
+        </h2>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {quarter.modules.map((module) => (
           <ModuleCard

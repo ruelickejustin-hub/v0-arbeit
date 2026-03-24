@@ -45,21 +45,21 @@ function getDocTypeIcon(docType: DocType) {
 }
 
 /**
- * Get subtle color classes for document type icon
+ * Get color classes for document type icon
  */
 function getDocTypeColors(docType: DocType): string {
   switch (docType) {
     case 'Presentation':
-      return 'bg-primary/8 text-primary'
+      return 'bg-primary/10 text-primary'
     case 'Video':
-      return 'bg-destructive/8 text-destructive'
+      return 'bg-destructive/10 text-destructive'
     case 'Document':
-      return 'bg-success/8 text-success'
+      return 'bg-success/10 text-success'
     case 'Reference':
     case 'Link':
-      return 'bg-warning/8 text-warning'
+      return 'bg-warning/10 text-warning'
     default:
-      return 'bg-muted/60 text-muted-foreground'
+      return 'bg-muted text-muted-foreground'
   }
 }
 
@@ -117,11 +117,11 @@ function ContentCard({
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden border transition-all duration-200',
-        'hover:shadow-md hover:border-primary/30',
+        'group relative cursor-pointer overflow-hidden transition-all duration-200',
+        'hover:shadow-md',
         isOpened 
-          ? 'border-success/40 bg-success/3' 
-          : 'border-border/50 bg-card'
+          ? 'border-2 border-success/50 bg-success/5 shadow-sm shadow-success/10' 
+          : 'border border-border/60 bg-card hover:border-primary/40 shadow-sm'
       )}
       onClick={handleClick}
       role="button"
@@ -133,12 +133,17 @@ function ContentCard({
         }
       }}
     >
+      {/* Success indicator bar */}
+      {isOpened && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-success" />
+      )}
+      
       <CardContent className="flex items-center gap-4 p-4">
         {/* Icon */}
         <div
           className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors',
-            colorClasses
+            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors',
+            isOpened ? 'bg-success/15 text-success' : colorClasses
           )}
         >
           <Icon className="h-5 w-5" />
@@ -146,7 +151,10 @@ function ContentCard({
         
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-foreground leading-snug text-balance">
+          <h3 className={cn(
+            'font-medium leading-snug text-balance',
+            isOpened ? 'text-success' : 'text-foreground'
+          )}>
             {displayTitle}
           </h3>
         </div>
@@ -154,16 +162,13 @@ function ContentCard({
         {/* Status / Action indicator */}
         <div className="flex shrink-0 items-center">
           {isOpened ? (
-            <div className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full',
-              'bg-success/10 text-success'
-            )}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
               <Check className="h-4 w-4" />
             </div>
           ) : (
             <div className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-              'bg-muted/50 text-muted-foreground',
+              'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+              'bg-muted/60 text-muted-foreground',
               'group-hover:bg-primary group-hover:text-primary-foreground'
             )}>
               {content.DocType === 'Video' ? (
@@ -209,19 +214,19 @@ function SessionInfoCard() {
   const { state } = useTraining()
   
   return (
-    <Card className="mb-6 border-border/50">
+    <Card className="mb-6 border-l-4 border-l-primary border-y-0 border-r-0 bg-primary/5">
       <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-        <span className="font-medium text-foreground">
+        <span className="font-semibold text-foreground">
           {state.selectedModule?.ModuleTitle}
         </span>
-        <div className="h-4 w-px bg-border hidden sm:block" />
+        <div className="h-4 w-px bg-primary/20 hidden sm:block" />
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-4 w-4 text-primary" />
             {new Date(state.trainingDate).toLocaleDateString('de-DE')}
           </span>
           <span className="flex items-center gap-1.5">
-            <Users className="h-4 w-4" />
+            <Users className="h-4 w-4 text-primary" />
             {state.participants.length} Teilnehmer
           </span>
         </div>
@@ -384,7 +389,7 @@ export function ContentViewer() {
             ? 'Sie können jederzeit zur Bestätigung übergehen.'
             : 'Alle Inhalte wurden durchgesehen.'}
         </p>
-        <Button size="lg" onClick={handleProceedToCompletion}>
+        <Button size="lg" onClick={handleProceedToCompletion} className="shadow-md">
           Zur Bestätigung
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
