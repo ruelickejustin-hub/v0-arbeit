@@ -77,8 +77,19 @@ export type TrainingStatus = 'Geplant' | 'In Durchführung' | 'Abgeschlossen' | 
 
 /**
  * Attendance status for participants
+ * - Unterwiesen: attended and completed training
+ * - Nicht erschienen: planned but did not attend, training remains open
+ * - Entfernt: removed from list (correction/cleanup)
  */
-export type AttendanceStatus = 'Geplant' | 'Unterwiesen' | 'Nicht teilgenommen' | 'Nachschulung erforderlich'
+export type AttendanceStatus = 'Unterwiesen' | 'Nicht erschienen' | 'Entfernt'
+
+/**
+ * Participant status in completion review
+ */
+export interface ParticipantFinalStatus {
+  participantId: string
+  status: AttendanceStatus
+}
 
 /**
  * Evidence types for training confirmation

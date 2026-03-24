@@ -236,7 +236,7 @@ export const MockDataProvider: IDataProvider = {
       LastName: params.participant.LastName,
       AlpsId: params.participant.AlpsId,
       Department: params.participant.Department,
-      AttendanceStatus: 'Unterwiesen',
+      AttendanceStatus: params.attendanceStatus,
       ConfirmedByTrainer: params.confirmedByTrainer,
       ConfirmationTimestamp: now,
       EvidenceType: params.evidenceType as Unterweisungsnachweis['EvidenceType'],

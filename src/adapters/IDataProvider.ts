@@ -11,6 +11,7 @@ import type {
   QuarterModules,
   Participant,
   TrainingDraft,
+  AttendanceStatus,
 } from '@/src/types/training'
 
 /**
@@ -37,6 +38,7 @@ export interface CreateEvidenceParams {
   moduleId: string
   moduleTitle: string
   participant: Participant
+  attendanceStatus: AttendanceStatus
   evidenceType: string
   confirmedByTrainer: boolean
   notes?: string

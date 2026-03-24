@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   CheckCircle,
   Users,
@@ -13,6 +13,8 @@ import {
   Clock,
   Shield,
   AlertCircle,
+  UserX,
+  UserMinus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,14 +22,6 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,14 +34,170 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useTraining } from '@/src/context/TrainingContext'
-import { getParticipantDisplayName } from '@/src/types/training'
+import { getParticipantDisplayName, type AttendanceStatus, type Participant } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 /**
+ * Status configuration for visual styling
+ */
+const STATUS_CONFIG: Record<AttendanceStatus, {
+  label: string
+  icon: React.ElementType
+  activeClass: string
+  inactiveClass: string
+}> = {
+  'Unterwiesen': {
+    label: 'Unterwiesen',
+    icon: CheckCircle,
+    activeClass: 'bg-success text-success-foreground border-success',
+    inactiveClass: 'border-border text-muted-foreground hover:border-success/50 hover:text-success',
+  },
+  'Nicht erschienen': {
+    label: 'Nicht erschienen',
+    icon: UserX,
+    activeClass: 'bg-warning text-warning-foreground border-warning',
+    inactiveClass: 'border-border text-muted-foreground hover:border-warning/50 hover:text-warning',
+  },
+  'Entfernt': {
+    label: 'Entfernt',
+    icon: UserMinus,
+    activeClass: 'bg-muted text-muted-foreground border-muted',
+    inactiveClass: 'border-border text-muted-foreground hover:border-muted-foreground/50',
+  },
+}
+
+/**
+ * Status Toggle Button
+ */
+function StatusButton({
+  status,
+  isActive,
+  onClick,
+}: {
+  status: AttendanceStatus
+  isActive: boolean
+  onClick: () => void
+}) {
+  const config = STATUS_CONFIG[status]
+  const Icon = config.icon
+  
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-all',
+        isActive ? config.activeClass : config.inactiveClass
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">{config.label}</span>
+    </button>
+  )
+}
+
+/**
+ * Participant Row with Status Selector
+ */
+function ParticipantStatusRow({
+  participant,
+  index,
+  currentStatus,
+  onStatusChange,
+}: {
+  participant: Participant
+  index: number
+  currentStatus: AttendanceStatus
+  onStatusChange: (status: AttendanceStatus) => void
+}) {
+  const isRemoved = currentStatus === 'Entfernt'
+  
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-4 rounded-lg border p-3 transition-all',
+        isRemoved ? 'bg-muted/30 border-muted opacity-60' : 'bg-card border-border'
+      )}
+    >
+      {/* Index */}
+      <span className="w-6 text-center font-mono text-xs text-muted-foreground">
+        {index + 1}
+      </span>
+      
+      {/* Participant Info */}
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          'font-medium truncate',
+          isRemoved && 'line-through text-muted-foreground'
+        )}>
+          {getParticipantDisplayName(participant)}
+        </p>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {participant.AlpsId && <span className="font-mono">{participant.AlpsId}</span>}
+          {participant.Department && (
+            <>
+              {participant.AlpsId && <span>·</span>}
+              <span>{participant.Department}</span>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Status Buttons */}
+      <div className="flex items-center gap-1.5">
+        {(['Unterwiesen', 'Nicht erschienen', 'Entfernt'] as AttendanceStatus[]).map((status) => (
+          <StatusButton
+            key={status}
+            status={status}
+            isActive={currentStatus === status}
+            onClick={() => onStatusChange(status)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Summary Badge
+ */
+function SummaryBadge({
+  label,
+  count,
+  variant,
+}: {
+  label: string
+  count: number
+  variant: 'success' | 'warning' | 'muted'
+}) {
+  const variantClasses = {
+    success: 'bg-success/10 text-success border-success/20',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    muted: 'bg-muted text-muted-foreground border-muted',
+  }
+  
+  return (
+    <div className={cn(
+      'flex items-center gap-2 rounded-lg border px-3 py-2',
+      variantClasses[variant]
+    )}>
+      <span className="text-lg font-semibold">{count}</span>
+      <span className="text-sm">{label}</span>
+    </div>
+  )
+}
+
+/**
  * Success State Component
  */
-function CompletionSuccess({ onNewTraining }: { onNewTraining: () => void }) {
+function CompletionSuccess({ 
+  onNewTraining,
+  stats,
+}: { 
+  onNewTraining: () => void
+  stats: { unterwiesen: number; nichtErschienen: number; entfernt: number }
+}) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
@@ -62,18 +212,28 @@ function CompletionSuccess({ onNewTraining }: { onNewTraining: () => void }) {
         </h1>
         <p className="mb-8 text-lg text-muted-foreground">
           Die Unterweisung wurde erfolgreich dokumentiert.
-          <br />
-          Alle Nachweise wurden erstellt.
         </p>
         
         {/* Summary Card */}
         <Card className="mb-8 text-left border-2 border-success/30 bg-success/5">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 text-success">
-              <FileCheck className="h-5 w-5" />
-              <span className="font-medium">
-                Nachweise wurden digital bestätigt und gespeichert.
-              </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Unterwiesen</span>
+                <span className="font-semibold text-success">{stats.unterwiesen}</span>
+              </div>
+              {stats.nichtErschienen > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Nicht erschienen (offen)</span>
+                  <span className="font-semibold text-warning">{stats.nichtErschienen}</span>
+                </div>
+              )}
+              {stats.entfernt > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Entfernt</span>
+                  <span className="font-semibold text-muted-foreground">{stats.entfernt}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -117,23 +277,51 @@ function InfoRow({
  * Completion Confirmation Screen
  */
 export function CompletionConfirmation() {
-  const { state, dispatch, completeTraining, resetTraining, canComplete } =
-    useTraining()
+  const { state, dispatch, completeTraining, resetTraining } = useTraining()
   const [notes, setNotes] = useState('')
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [completionStats, setCompletionStats] = useState({ unterwiesen: 0, nichtErschienen: 0, entfernt: 0 })
+
+  // Initialize participant statuses when entering completion screen
+  useEffect(() => {
+    if (Object.keys(state.participantStatuses).length === 0 && state.participants.length > 0) {
+      dispatch({ type: 'INIT_PARTICIPANT_STATUSES' })
+    }
+  }, [state.participants, state.participantStatuses, dispatch])
 
   // Check if we can complete
   const validParticipants = state.participants.filter(
     (p) => p.FirstName.trim().length > 0 && p.LastName.trim().length > 0
   )
   
+  // Calculate stats
+  const stats = useMemo(() => {
+    const unterwiesen = validParticipants.filter(
+      p => (state.participantStatuses[p.id] || 'Unterwiesen') === 'Unterwiesen'
+    ).length
+    const nichtErschienen = validParticipants.filter(
+      p => state.participantStatuses[p.id] === 'Nicht erschienen'
+    ).length
+    const entfernt = validParticipants.filter(
+      p => state.participantStatuses[p.id] === 'Entfernt'
+    ).length
+    
+    return { unterwiesen, nichtErschienen, entfernt }
+  }, [validParticipants, state.participantStatuses])
+  
   const canConfirm =
     state.selectedModule !== null &&
     state.trainer.trim().length > 0 &&
     state.trainingDate.length > 0 &&
     validParticipants.length > 0 &&
-    state.currentSession !== null
+    state.currentSession !== null &&
+    (stats.unterwiesen > 0 || stats.nichtErschienen > 0) // At least one non-removed participant
+
+  // Handle status change
+  const handleStatusChange = (participantId: string, status: AttendanceStatus) => {
+    dispatch({ type: 'SET_PARTICIPANT_STATUS', participantId, status })
+  }
 
   // Handle completion
   const handleComplete = async () => {
@@ -143,10 +331,11 @@ export function CompletionConfirmation() {
     try {
       const success = await completeTraining(notes)
       if (success) {
+        setCompletionStats(stats)
         setIsCompleted(true)
         toast.success('Unterweisung erfolgreich abgeschlossen')
       }
-    } catch (error) {
+    } catch {
       toast.error('Fehler beim Abschließen der Unterweisung')
     } finally {
       setIsCompleting(false)
@@ -167,7 +356,7 @@ export function CompletionConfirmation() {
 
   // Show success state if completed
   if (isCompleted) {
-    return <CompletionSuccess onNewTraining={handleNewTraining} />
+    return <CompletionSuccess onNewTraining={handleNewTraining} stats={completionStats} />
   }
 
   return (
@@ -189,12 +378,12 @@ export function CompletionConfirmation() {
           Unterweisung abschließen
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Prüfen Sie die Zusammenfassung und bestätigen Sie die Unterweisung.
+          Prüfen Sie den Status jedes Teilnehmers und bestätigen Sie die Unterweisung.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Summary */}
+        {/* Left Column - Summary & Participants */}
         <div className="lg:col-span-2 space-y-6">
           {/* Module Info */}
           <Card className="border-2 border-primary/20 bg-primary/5">
@@ -255,44 +444,33 @@ export function CompletionConfirmation() {
             </CardContent>
           </Card>
 
-          {/* Participants */}
+          {/* Participants with Status Selector */}
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Teilnehmer</CardTitle>
-              <Badge variant="outline">
-                {validParticipants.length} Personen
-              </Badge>
+              <CardTitle className="text-base">Teilnehmerstatus</CardTitle>
+              <div className="flex items-center gap-2">
+                <SummaryBadge label="Unterwiesen" count={stats.unterwiesen} variant="success" />
+                {stats.nichtErschienen > 0 && (
+                  <SummaryBadge label="Offen" count={stats.nichtErschienen} variant="warning" />
+                )}
+                {stats.entfernt > 0 && (
+                  <SummaryBadge label="Entfernt" count={stats.entfernt} variant="muted" />
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="max-h-64">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>ALPS ID</TableHead>
-                      <TableHead>Abteilung</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {validParticipants.map((participant, index) => (
-                      <TableRow key={participant.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {getParticipantDisplayName(participant)}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {participant.AlpsId || '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {participant.Department || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <ScrollArea className="max-h-96">
+                <div className="space-y-2 p-4">
+                  {validParticipants.map((participant, index) => (
+                    <ParticipantStatusRow
+                      key={participant.id}
+                      participant={participant}
+                      index={index}
+                      currentStatus={state.participantStatuses[participant.id] || 'Unterwiesen'}
+                      onStatusChange={(status) => handleStatusChange(participant.id, status)}
+                    />
+                  ))}
+                </div>
               </ScrollArea>
             </CardContent>
           </Card>
@@ -328,8 +506,10 @@ export function CompletionConfirmation() {
                     Bestätigung
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Mit der Bestätigung werden für alle {validParticipants.length} Teilnehmer
-                    digitale Nachweise erstellt.
+                    {stats.unterwiesen} Nachweis{stats.unterwiesen !== 1 ? 'e' : ''} werden erstellt.
+                    {stats.nichtErschienen > 0 && (
+                      <> {stats.nichtErschienen} offen.</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -348,6 +528,8 @@ export function CompletionConfirmation() {
                         ? 'Modul nicht ausgewählt'
                         : validParticipants.length === 0
                         ? 'Keine gültigen Teilnehmer'
+                        : stats.unterwiesen === 0 && stats.nichtErschienen === 0
+                        ? 'Mindestens ein Teilnehmer erforderlich'
                         : 'Unterweisung nicht gestartet'}
                     </span>
                   </div>
@@ -392,10 +574,20 @@ export function CompletionConfirmation() {
                     <AlertDialogTitle>
                       Unterweisung abschließen?
                     </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Mit der Bestätigung wird die Unterweisung als abgeschlossen
-                      markiert und für alle {validParticipants.length} Teilnehmer
-                      werden digitale Nachweise erstellt.
+                    <AlertDialogDescription className="space-y-2">
+                      <span className="block">
+                        Es werden {stats.unterwiesen} Nachweis{stats.unterwiesen !== 1 ? 'e' : ''} erstellt.
+                      </span>
+                      {stats.nichtErschienen > 0 && (
+                        <span className="block text-warning">
+                          {stats.nichtErschienen} Teilnehmer nicht erschienen - Unterweisung bleibt offen.
+                        </span>
+                      )}
+                      {stats.entfernt > 0 && (
+                        <span className="block text-muted-foreground">
+                          {stats.entfernt} Teilnehmer entfernt.
+                        </span>
+                      )}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

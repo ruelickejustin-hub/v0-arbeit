@@ -19,6 +19,7 @@ import type {
   TrainingStep,
   Unterweisungstermin,
   TrainingDraft,
+  AttendanceStatus,
 } from '@/src/types/training'
 import { getDataProvider } from '@/src/adapters'
 import { appConfig } from '@/src/config/app.config'
@@ -44,6 +45,9 @@ interface TrainingState {
   
   // Step C: Content progress
   contentProgress: Record<string, boolean>
+  
+  // Step D: Participant final statuses (for completion review)
+  participantStatuses: Record<string, AttendanceStatus>
   
   // Session management
   currentSession: Unterweisungstermin | null
@@ -73,6 +77,8 @@ type TrainingAction =
   | { type: 'SET_CONTENT_PROGRESS'; contentId: string; opened: boolean }
   | { type: 'TOGGLE_CONTENT_PROGRESS'; contentId: string }
   | { type: 'RESET_CONTENT_PROGRESS' }
+  | { type: 'SET_PARTICIPANT_STATUS'; participantId: string; status: AttendanceStatus }
+  | { type: 'INIT_PARTICIPANT_STATUSES' }
   | { type: 'SET_SESSION'; session: Unterweisungstermin }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
@@ -95,6 +101,7 @@ const initialState: TrainingState = {
   workplace: '',
   participants: [],
   contentProgress: {},
+  participantStatuses: {},
   currentSession: null,
   draftId: null,
   isDraftLoading: false,
@@ -179,6 +186,25 @@ function trainingReducer(state: TrainingState, action: TrainingAction): Training
       return {
         ...state,
         contentProgress: {},
+      }
+    
+    case 'SET_PARTICIPANT_STATUS':
+      return {
+        ...state,
+        participantStatuses: {
+          ...state.participantStatuses,
+          [action.participantId]: action.status,
+        },
+      }
+    
+    case 'INIT_PARTICIPANT_STATUSES':
+      // Initialize all participants with 'Unterwiesen' status
+      return {
+        ...state,
+        participantStatuses: state.participants.reduce((acc, p) => {
+          acc[p.id] = 'Unterwiesen'
+          return acc
+        }, {} as Record<string, AttendanceStatus>),
       }
     
     case 'SET_SESSION':
@@ -395,12 +421,19 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         notes,
       })
       
-      // Create evidence records for all participants
-      const evidenceParams = state.participants.map(participant => ({
+      // Create evidence records for participants that are not "Entfernt"
+      // Filter out removed participants, include both Unterwiesen and Nicht erschienen
+      const participantsToRecord = state.participants.filter(p => {
+        const status = state.participantStatuses[p.id] || 'Unterwiesen'
+        return status !== 'Entfernt'
+      })
+      
+      const evidenceParams = participantsToRecord.map(participant => ({
         terminId: state.currentSession!.TerminId,
         moduleId: state.selectedModule!.ModuleId,
         moduleTitle: state.selectedModule!.ModuleTitle,
         participant,
+        attendanceStatus: (state.participantStatuses[participant.id] || 'Unterwiesen') as AttendanceStatus,
         evidenceType: 'Digital bestätigt',
         confirmedByTrainer: true,
         notes,
@@ -421,7 +454,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', isLoading: false })
     }
-  }, [state.currentSession, state.selectedModule, state.participants, state.draftId, provider])
+  }, [state.currentSession, state.selectedModule, state.participants, state.participantStatuses, state.draftId, provider])
   
   const resetTraining = useCallback(() => {
     dispatch({ type: 'RESET' })
