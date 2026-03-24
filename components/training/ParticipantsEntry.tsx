@@ -420,33 +420,24 @@ export function ParticipantsEntry() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header with back button */}
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGoBack}
-              className="-ml-2"
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Zurück
-            </Button>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Teilnehmer erfassen
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Erfassen Sie die Unterweisungsdaten und Teilnehmer.
-          </p>
+      <div className="mb-8">
+        <div className="mb-2 flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGoBack}
+            className="-ml-2"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Zurück
+          </Button>
         </div>
-        
-        {/* Selected Module Badge */}
-        {state.selectedModule && (
-          <Badge variant="outline" className="text-sm">
-            {state.selectedModule.ModuleTitle}
-          </Badge>
-        )}
+        <h1 className="text-2xl font-bold text-foreground">
+          Teilnehmer erfassen
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          {state.selectedModule?.ModuleTitle}
+        </p>
       </div>
 
       {/* Session Metadata */}

@@ -7,7 +7,7 @@ import {
   Presentation,
   Link as LinkIcon,
   ExternalLink,
-  CheckCircle,
+  Check,
   ArrowLeft,
   ArrowRight,
   Play,
@@ -17,14 +17,13 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { useTraining } from '@/src/context/TrainingContext'
 import { getDataProvider } from '@/src/adapters'
+import { appConfig } from '@/src/config/app.config'
 import type { Unterweisungsverweis, DocType } from '@/src/types/training'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 /**
  * Get icon for document type
@@ -46,26 +45,47 @@ function getDocTypeIcon(docType: DocType) {
 }
 
 /**
- * Get color classes for document type
+ * Get subtle color classes for document type icon
  */
 function getDocTypeColors(docType: DocType): string {
   switch (docType) {
     case 'Presentation':
-      return 'bg-primary/10 text-primary'
+      return 'bg-primary/8 text-primary'
     case 'Video':
-      return 'bg-destructive/10 text-destructive'
+      return 'bg-destructive/8 text-destructive'
     case 'Document':
-      return 'bg-success/10 text-success'
+      return 'bg-success/8 text-success'
     case 'Reference':
     case 'Link':
-      return 'bg-warning/10 text-warning'
+      return 'bg-warning/8 text-warning'
     default:
-      return 'bg-muted text-muted-foreground'
+      return 'bg-muted/60 text-muted-foreground'
   }
 }
 
 /**
- * Content Card Component
+ * Build the content URL
+ */
+function buildContentUrl(content: Unterweisungsverweis): string | null {
+  const url = content.ServerRelativeUrl
+  if (!url) return null
+  
+  // Full URL - use directly
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  
+  // Relative SharePoint path - would be resolved in live mode
+  // In demo mode, we can't open these
+  if (appConfig.dataSourceMode === 'sharepoint' && appConfig.sharePointSiteUrl) {
+    return `${appConfig.sharePointSiteUrl}${url}`
+  }
+  
+  return null
+}
+
+/**
+ * Content Card Component - Clean, premium design
  */
 function ContentCard({
   content,
@@ -82,21 +102,26 @@ function ContentCard({
   // Get display title (prefer LinkLabel, then FileName)
   const displayTitle = content.LinkLabel || content.FileName || content.Title
   
-  // Build the URL - in demo mode, show a toast; in live mode, use actual URL
+  // Build the actual URL
+  const contentUrl = buildContentUrl(content)
+  
   const handleClick = () => {
-    // In demo mode, we simulate opening
-    toast.info(`Inhalt geöffnet: ${displayTitle}`, {
-      description: 'In der Live-Version wird der Inhalt in einem neuen Tab geöffnet.',
-    })
+    // Try to open real URL if available
+    if (contentUrl) {
+      window.open(contentUrl, '_blank', 'noopener,noreferrer')
+    }
+    // Mark as opened regardless
     onOpen()
   }
   
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden transition-all duration-200',
+        'group relative cursor-pointer overflow-hidden border transition-all duration-200',
         'hover:shadow-md hover:border-primary/30',
-        isOpened && 'border-success/50 bg-success/5'
+        isOpened 
+          ? 'border-success/40 bg-success/3' 
+          : 'border-border/50 bg-card'
       )}
       onClick={handleClick}
       role="button"
@@ -108,15 +133,15 @@ function ContentCard({
         }
       }}
     >
-      <CardContent className="flex items-start gap-4 p-4">
+      <CardContent className="flex items-center gap-4 p-4">
         {/* Icon */}
         <div
           className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors',
             colorClasses
           )}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className="h-5 w-5" />
         </div>
         
         {/* Content */}
@@ -124,24 +149,21 @@ function ContentCard({
           <h3 className="font-medium text-foreground leading-snug text-balance">
             {displayTitle}
           </h3>
-          {content.DocCategory && (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {content.DocCategory}
-            </p>
-          )}
         </div>
         
-        {/* Status / Action */}
-        <div className="flex items-center gap-2">
+        {/* Status / Action indicator */}
+        <div className="flex shrink-0 items-center">
           {isOpened ? (
-            <div className="flex items-center gap-1.5 text-sm text-success">
-              <CheckCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Geöffnet</span>
+            <div className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-full',
+              'bg-success/10 text-success'
+            )}>
+              <Check className="h-4 w-4" />
             </div>
           ) : (
             <div className={cn(
               'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-              'bg-secondary text-muted-foreground',
+              'bg-muted/50 text-muted-foreground',
               'group-hover:bg-primary group-hover:text-primary-foreground'
             )}>
               {content.DocType === 'Video' ? (
@@ -181,18 +203,17 @@ function ContentViewerSkeleton() {
 }
 
 /**
- * Session Info Card
+ * Session Info Card - Clean summary of current training session
  */
 function SessionInfoCard() {
   const { state } = useTraining()
   
   return (
-    <Card className="mb-6 bg-primary/5 border-primary/20">
-      <CardContent className="flex flex-wrap items-center gap-4 p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Badge variant="secondary">{state.selectedModule?.ModuleId}</Badge>
-          <span className="font-medium">{state.selectedModule?.ModuleTitle}</span>
-        </div>
+    <Card className="mb-6 border-border/50">
+      <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+        <span className="font-medium text-foreground">
+          {state.selectedModule?.ModuleTitle}
+        </span>
         <div className="h-4 w-px bg-border hidden sm:block" />
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
@@ -229,7 +250,6 @@ export function ContentViewer() {
         setContents(data)
       } catch (error) {
         console.error('Failed to load content:', error)
-        toast.error('Fehler beim Laden der Inhalte')
       } finally {
         setIsLoading(false)
       }

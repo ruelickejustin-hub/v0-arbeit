@@ -203,13 +203,10 @@ export function CompletionConfirmation() {
               </div>
             </CardHeader>
             <CardContent>
-              <Badge variant="secondary" className="mb-2">
-                {state.selectedModule?.ModuleId}
-              </Badge>
-              <h3 className="text-lg font-semibold">
+              <h3 className="text-lg font-semibold text-foreground">
                 {state.selectedModule?.ModuleTitle}
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {state.selectedModule?.QuarterTitle}
               </p>
             </CardContent>
