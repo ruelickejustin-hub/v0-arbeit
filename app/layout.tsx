@@ -17,13 +17,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Unterweisungs-App | EHS Training',
-  description: 'Digitale Unterweisungen für Arbeitssicherheit und Umweltschutz',
+  description: 'Digitale Unterweisungen für Arbeitssicherheit und Umweltschutz. Effiziente Dokumentation und Nachverfolgung von Sicherheitsunterweisungen.',
+  keywords: ['Unterweisung', 'EHS', 'Arbeitssicherheit', 'Umweltschutz', 'Training', 'Dokumentation'],
+  authors: [{ name: 'EHS Training Team' }],
+  robots: 'index, follow',
+  openGraph: {
+    title: 'Unterweisungs-App | EHS Training',
+    description: 'Digitale Unterweisungen für Arbeitssicherheit und Umweltschutz',
+    type: 'website',
+    locale: 'de_DE',
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: '#1E3246',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 }
 
 export default function RootLayout({

@@ -77,10 +77,9 @@ export const SharePointDataProvider: IDataProvider = {
     throw new Error('SharePoint integration not implemented. Set dataSourceMode to "demo" in config.')
   },
   
-  async getVerweiseByModule(moduleId: string): Promise<Unterweisungsverweis[]> {
+  async getVerweiseByModule(_moduleId: string): Promise<Unterweisungsverweis[]> {
     // TODO: Implement with OData filter
     // GET .../items?$filter=fields/ModuleId eq '{moduleId}' and fields/ShowInTraining eq true
-    console.log('Fetching content for module:', moduleId)
     throw new Error('SharePoint integration not implemented.')
   },
   
@@ -103,30 +102,26 @@ export const SharePointDataProvider: IDataProvider = {
     throw new Error('SharePoint integration not implemented.')
   },
   
-  async getTerminById(terminId: string): Promise<Unterweisungstermin | null> {
+  async getTerminById(_terminId: string): Promise<Unterweisungstermin | null> {
     // TODO: GET .../items?$filter=fields/TerminId eq '{terminId}'
-    console.log('Fetching termin:', terminId)
     throw new Error('SharePoint integration not implemented.')
   },
   
-  async createTermin(params: CreateSessionParams): Promise<Unterweisungstermin> {
+  async createTermin(_params: CreateSessionParams): Promise<Unterweisungstermin> {
     // TODO: POST https://graph.microsoft.com/v1.0/sites/{site-id}/lists/Unterweisungstermine/items
-    console.log('Creating termin:', params)
     throw new Error('SharePoint integration not implemented.')
   },
   
   async updateTermin(
-    terminId: string,
-    updates: Partial<Unterweisungstermin>
+    _terminId: string,
+    _updates: Partial<Unterweisungstermin>
   ): Promise<Unterweisungstermin> {
     // TODO: PATCH https://graph.microsoft.com/v1.0/sites/{site-id}/lists/{list-id}/items/{item-id}
-    console.log('Updating termin:', terminId, updates)
     throw new Error('SharePoint integration not implemented.')
   },
   
-  async completeTermin(params: CompleteSessionParams): Promise<Unterweisungstermin> {
+  async completeTermin(_params: CompleteSessionParams): Promise<Unterweisungstermin> {
     // TODO: Update status to "Abgeschlossen" and create evidence records
-    console.log('Completing termin:', params)
     throw new Error('SharePoint integration not implemented.')
   },
   
@@ -139,23 +134,20 @@ export const SharePointDataProvider: IDataProvider = {
     throw new Error('SharePoint integration not implemented.')
   },
   
-  async getNachweiseByTermin(terminId: string): Promise<Unterweisungsnachweis[]> {
+  async getNachweiseByTermin(_terminId: string): Promise<Unterweisungsnachweis[]> {
     // TODO: GET .../items?$filter=fields/TerminId eq '{terminId}'
-    console.log('Fetching nachweise for termin:', terminId)
     throw new Error('SharePoint integration not implemented.')
   },
   
-  async createNachweis(params: CreateEvidenceParams): Promise<Unterweisungsnachweis> {
+  async createNachweis(_params: CreateEvidenceParams): Promise<Unterweisungsnachweis> {
     // TODO: POST to Unterweisungsnachweise list
-    console.log('Creating nachweis:', params)
     throw new Error('SharePoint integration not implemented.')
   },
   
   async createNachweiseBatch(
-    params: CreateEvidenceParams[]
+    _params: CreateEvidenceParams[]
   ): Promise<Unterweisungsnachweis[]> {
     // TODO: Batch create using Graph API $batch endpoint
-    console.log('Creating batch nachweise:', params.length)
     throw new Error('SharePoint integration not implemented.')
   },
   
@@ -163,19 +155,16 @@ export const SharePointDataProvider: IDataProvider = {
   // DRAFT / AUTOSAVE
   // ===========================================================================
   
-  async saveDraft(draft: TrainingDraft): Promise<void> {
+  async saveDraft(_draft: TrainingDraft): Promise<void> {
     // TODO: Could use a SharePoint list or user's OneDrive for draft storage
-    console.log('Saving draft:', draft.id)
     throw new Error('SharePoint integration not implemented.')
   },
-  
-  async loadDraft(draftId: string): Promise<TrainingDraft | null> {
-    console.log('Loading draft:', draftId)
+
+  async loadDraft(_draftId: string): Promise<TrainingDraft | null> {
     throw new Error('SharePoint integration not implemented.')
   },
-  
-  async deleteDraft(draftId: string): Promise<void> {
-    console.log('Deleting draft:', draftId)
+
+  async deleteDraft(_draftId: string): Promise<void> {
     throw new Error('SharePoint integration not implemented.')
   },
   

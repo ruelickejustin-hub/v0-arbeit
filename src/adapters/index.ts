@@ -29,9 +29,4 @@ export { MockDataProvider } from './MockDataProvider'
 export { SharePointDataProvider } from './SharePointDataProvider'
 export type { IDataProvider } from './IDataProvider'
 
-/**
- * Log current data source mode on module load (development only)
- */
-if (typeof window !== 'undefined' && appConfig.debug) {
-  console.log(`[EHS App] Data source mode: ${appConfig.dataSourceMode}`)
-}
+

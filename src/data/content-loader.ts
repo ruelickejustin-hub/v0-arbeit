@@ -142,7 +142,7 @@ export async function loadContentFromCSV(): Promise<Unterweisungsverweis[]> {
   try {
     const response = await fetch('/data/Unterweisungsverweise.csv')
     if (!response.ok) {
-      console.error('[v0] Failed to load CSV:', response.status)
+      // CSV not found or load error
       return []
     }
     
@@ -154,10 +154,9 @@ export async function loadContentFromCSV(): Promise<Unterweisungsverweis[]> {
       .filter(content => content.ShowInTraining && content.ModuleId) // Only show items marked for training with a module
       .sort((a, b) => a.SortOrder - b.SortOrder)
     
-    console.log(`[v0] Loaded ${cachedContent.length} content items from CSV`)
     return cachedContent
   } catch (error) {
-    console.error('[v0] Error loading CSV:', error)
+    // Silently fail - empty content will be returned
     return []
   }
 }
@@ -224,7 +223,6 @@ export async function loadModulesFromContent(): Promise<QuarterModules[]> {
       modules: quarterMap.get(qId)!.sort((a, b) => a.ModuleId.localeCompare(b.ModuleId)),
     }))
   
-  console.log(`[v0] Extracted ${moduleMap.size} modules from content`)
   return cachedModules
 }
 

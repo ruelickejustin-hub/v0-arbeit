@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Shield, BookOpen, ClipboardList } from 'lucide-react'
-import { TrainingProvider, useTraining } from '@/src/context/TrainingContext'
+import { useTraining } from '@/src/context/TrainingContext'
 import { ModuleSelection } from './ModuleSelection'
 import { ParticipantsEntry } from './ParticipantsEntry'
 import { ContentViewer } from './ContentViewer'
@@ -66,6 +66,8 @@ function AppHeader({
             <div className="flex rounded-lg bg-white/10 p-0.5">
               <button
                 onClick={() => onModeChange('browse')}
+                aria-label="Übersicht anzeigen"
+                aria-pressed={mode === 'browse'}
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
                   mode === 'browse' 
@@ -73,11 +75,13 @@ function AppHeader({
                     : 'text-white/80 hover:text-white'
                 )}
               >
-                <BookOpen className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Übersicht</span>
+                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only sm:inline">Übersicht</span>
               </button>
               <button
                 onClick={() => onModeChange('training')}
+                aria-label="Unterweisung starten"
+                aria-pressed={mode === 'training'}
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
                   mode === 'training' 
@@ -85,8 +89,8 @@ function AppHeader({
                     : 'text-white/80 hover:text-white'
                 )}
               >
-                <ClipboardList className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Unterweisung</span>
+                <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only sm:inline">Unterweisung</span>
               </button>
             </div>
           </div>
@@ -140,11 +144,8 @@ function AppContent() {
 
 /**
  * Main Training App Component
+ * Note: TrainingProvider is already wrapped in app/layout.tsx
  */
 export function TrainingApp() {
-  return (
-    <TrainingProvider>
-      <AppContent />
-    </TrainingProvider>
-  )
+  return <AppContent />
 }
