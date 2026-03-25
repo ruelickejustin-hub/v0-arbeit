@@ -128,7 +128,6 @@ function QuarterSection({
   selectedModuleId: string | null
 }) {
   const quarterColors = QUARTER_COLORS[quarter.quarterId]
-  const moduleCount = quarter.modules.length
   
   return (
     <section className="mb-12">
@@ -143,14 +142,9 @@ function QuarterSection({
         )}>
           {quarter.quarterId.replace('Q', '')}
         </div>
-        <div className="flex-1">
-          <h2 className={cn('text-lg font-bold', quarterColors.accentText)}>
-            {quarter.quarterTitle}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {moduleCount} {moduleCount === 1 ? 'Modul' : 'Module'} verfügbar
-          </p>
-        </div>
+        <h2 className={cn('text-lg font-bold', quarterColors.accentText)}>
+          {quarter.quarterTitle}
+        </h2>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {quarter.modules.map((module) => (
