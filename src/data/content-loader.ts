@@ -95,12 +95,16 @@ function parseCSVLine(line: string): string[] {
  */
 function mapRowToContent(row: Record<string, string>, index: number): Unterweisungsverweis {
   // Determine DocType - map to our expected types
+  // Keep "Video" as-is for proper filtering
   let docType = row.DocType || 'Document'
   if (docType === 'Video') {
     docType = 'Video'
-  } else if (docType.includes('Präsentation') || row.FileExtension === 'pptx' || row.FileExtension === 'potx') {
+  } else if (docType.includes('Präsentation') || docType === 'Schulungsunterlage' || row.FileExtension === 'pptx' || row.FileExtension === 'potx') {
+    // Schulungsunterlage (training materials) are typically presentation-style documents
     docType = 'Presentation'
   } else {
+    // All other types: Monatsthema, Referenzdokument, EHS-PRO, Standard, Betriebsanweisung, 
+    // Gefährdungsbeurteilung, Checkliste, etc. are treated as Document
     docType = 'Document'
   }
   

@@ -170,8 +170,14 @@ function BrowseContentItem({
   const handleClick = () => {
     if (!url) return
     
-    if (content.DocType === 'Video' && isEmbeddableVideo(url)) {
-      onOpenVideo(content, url)
+    if (content.DocType === 'Video') {
+      // SharePoint videos can't be embedded - open in new tab
+      // Non-SharePoint embeddable videos could use the modal
+      if (isEmbeddableVideo(url)) {
+        onOpenVideo(content, url)
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
     } else {
       window.open(url, '_blank', 'noopener,noreferrer')
     }
@@ -239,8 +245,8 @@ function ModuleDetail({
         const provider = getDataProvider()
         const data = await provider.getVerweiseByModule(module.ModuleId)
         setContents(data)
-      } catch (error) {
-        console.error('Failed to load content:', error)
+      } catch {
+        // Content loading failed - empty state will be shown
       } finally {
         setIsLoading(false)
       }
@@ -471,8 +477,8 @@ export function ContentBrowser() {
         const provider = getDataProvider()
         const data = await provider.getModulesByQuarter()
         setQuarters(data)
-      } catch (error) {
-        console.error('Failed to load data:', error)
+      } catch {
+        // Data loading failed - empty state will be shown
       } finally {
         setIsLoading(false)
       }

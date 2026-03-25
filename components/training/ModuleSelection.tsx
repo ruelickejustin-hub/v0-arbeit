@@ -177,8 +177,8 @@ export function ModuleSelection() {
         const provider = getDataProvider()
         const data = await provider.getModulesByQuarter()
         setQuarters(data)
-      } catch (error) {
-        console.error('Failed to load modules:', error)
+      } catch {
+        // Module loading failed - empty state will be shown
       } finally {
         setIsLoading(false)
       }

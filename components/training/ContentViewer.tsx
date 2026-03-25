@@ -392,6 +392,183 @@ function ContentCard({
 }
 
 /**
+ * Video Selection Panel - For modules with multiple videos
+ */
+function VideoSelectionPanel({
+  isOpen,
+  onClose,
+  videos,
+  onSelectVideo,
+  openedVideos,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  videos: Unterweisungsverweis[]
+  onSelectVideo: (video: Unterweisungsverweis) => void
+  openedVideos: Set<string>
+}) {
+  return (
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Video className="h-5 w-5 text-destructive" />
+            Videos auswählen
+          </SheetTitle>
+        </SheetHeader>
+        <div className="mt-6 space-y-3">
+          {videos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Video className="mx-auto h-10 w-10 mb-3 opacity-50" />
+              <p>Keine Videos verfügbar</p>
+            </div>
+          ) : (
+            videos.map((video) => {
+              const videoUrl = buildContentUrl(video)
+              const isAvailable = !!videoUrl
+              const isOpened = openedVideos.has(video.id)
+              
+              return (
+                <Card
+                  key={video.id}
+                  className={cn(
+                    'cursor-pointer transition-all',
+                    isAvailable 
+                      ? 'hover:shadow-md hover:border-destructive/40' 
+                      : 'opacity-60 cursor-not-allowed',
+                    isOpened && 'border-success/50 bg-success/5'
+                  )}
+                  onClick={() => isAvailable && onSelectVideo(video)}
+                >
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                      isOpened ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive'
+                    )}>
+                      <Play className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'font-medium truncate',
+                        isOpened ? 'text-success' : 'text-foreground'
+                      )}>
+                        {video.LinkLabel || video.FileName || video.Title}
+                      </p>
+                      {!isAvailable && (
+                        <p className="text-xs text-muted-foreground">Nicht verfügbar</p>
+                      )}
+                    </div>
+                    {isOpened ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : isAvailable ? (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/**
+ * Video Summary Card - For displaying video action when module has videos
+ */
+function VideoSummaryCard({
+  videos,
+  openedCount,
+  onAction,
+}: {
+  videos: Unterweisungsverweis[]
+  openedCount: number
+  onAction: () => void
+}) {
+  const totalCount = videos.length
+  const allOpened = openedCount === totalCount && totalCount > 0
+  const hasVideos = totalCount > 0
+  
+  // Check if any video has a valid URL
+  const hasAvailableVideos = videos.some(v => !!buildContentUrl(v))
+  
+  return (
+    <Card
+      className={cn(
+        'group relative overflow-hidden transition-all duration-200',
+        hasAvailableVideos ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-70',
+        allOpened 
+          ? 'border-2 border-success/50 bg-success/5' 
+          : 'border border-border/60 bg-card',
+        hasAvailableVideos && !allOpened && 'hover:border-destructive/40'
+      )}
+      onClick={() => hasAvailableVideos && onAction()}
+      role="button"
+      tabIndex={hasAvailableVideos ? 0 : -1}
+      onKeyDown={(e) => {
+        if (hasAvailableVideos && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onAction()
+        }
+      }}
+    >
+      {allOpened && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-success" />
+      )}
+      
+      <CardContent className="flex items-center gap-4 p-4">
+        <div className={cn(
+          'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+          allOpened ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive'
+        )}>
+          <Video className="h-5 w-5" />
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <h3 className={cn(
+            'font-medium',
+            allOpened ? 'text-success' : 'text-foreground'
+          )}>
+            {hasVideos ? (totalCount === 1 ? 'Video abspielen' : 'Videos') : 'Kein Video verfügbar'}
+          </h3>
+          {hasVideos ? (
+            <p className="text-sm text-muted-foreground">
+              {totalCount === 1 
+                ? (videos[0].LinkLabel || videos[0].Title)
+                : `${openedCount} von ${totalCount} angesehen`
+              }
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Für dieses Modul sind keine Videos hinterlegt
+            </p>
+          )}
+        </div>
+        
+        <div className="flex shrink-0 items-center">
+          {!hasVideos ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/40 text-muted-foreground/50">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+          ) : allOpened ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground group-hover:bg-destructive group-hover:text-destructive-foreground transition-colors">
+              {totalCount === 1 ? <Play className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
  * References Summary Card - Opens the references panel
  */
 function ReferencesSummaryCard({
@@ -525,6 +702,7 @@ export function ContentViewer() {
   const [videoModalOpen, setVideoModalOpen] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
   const [referencesPanelOpen, setReferencesPanelOpen] = useState(false)
+  const [videoSelectionPanelOpen, setVideoSelectionPanelOpen] = useState(false)
   
   // Load content for the selected module
   useEffect(() => {
@@ -536,8 +714,8 @@ export function ContentViewer() {
         const provider = getDataProvider()
         const data = await provider.getVerweiseByModule(state.selectedModule.ModuleId)
         setContents(data)
-      } catch (error) {
-        console.error('Failed to load content:', error)
+      } catch {
+        // Content loading failed - empty state will be shown
       } finally {
         setIsLoading(false)
       }
@@ -547,7 +725,8 @@ export function ContentViewer() {
   }, [state.selectedModule])
   
   // Separate content by type
-  // Videos and Presentations are main content
+  // Videos get their own summary card (single or multiple)
+  // Presentations are shown as main content cards
   // Everything else (Referenzdokument, Monatsthema, Betriebsanweisung, etc.) are references
   const { mainContent, references, videos } = useMemo(() => {
     const main: Unterweisungsverweis[] = []
@@ -555,10 +734,10 @@ export function ContentViewer() {
     const vids: Unterweisungsverweis[] = []
     
     for (const content of contents) {
-      // Videos are separated for the video action
+      // Videos are separated - they'll be shown via VideoSummaryCard
       if (content.DocType === 'Video') {
         vids.push(content)
-        main.push(content) // Also show in main content
+        // Videos are NOT added to main content - they have their own card
       } else if (content.DocType === 'Presentation') {
         main.push(content)
       } else {
@@ -584,6 +763,10 @@ export function ContentViewer() {
   // Count opened references
   const openedRefsCount = references.filter(r => state.contentProgress[r.id]).length
   const openedRefsSet = new Set(references.filter(r => state.contentProgress[r.id]).map(r => r.id))
+  
+  // Count opened videos
+  const openedVideosCount = videos.filter(v => state.contentProgress[v.id]).length
+  const openedVideosSet = new Set(videos.filter(v => state.contentProgress[v.id]).map(v => v.id))
   
   // Handle content action based on type
   const handleContentAction = (content: Unterweisungsverweis) => {
@@ -611,6 +794,43 @@ export function ContentViewer() {
         window.open(url, '_blank', 'noopener,noreferrer')
         break
     }
+  }
+  
+  // Handle video action - single video opens directly, multiple opens selection panel
+  const handleVideoAction = () => {
+    if (videos.length === 0) return
+    
+    if (videos.length === 1) {
+      // Single video - open it directly
+      const video = videos[0]
+      const url = buildContentUrl(video)
+      if (!url) return
+      
+      // Mark as opened
+      if (!state.contentProgress[video.id]) {
+        dispatch({ type: 'SET_CONTENT_PROGRESS', contentId: video.id, opened: true })
+      }
+      
+      // SharePoint videos can't be embedded, open in new tab
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      // Multiple videos - show selection panel
+      setVideoSelectionPanelOpen(true)
+    }
+  }
+  
+  // Handle selecting a video from the selection panel
+  const handleSelectVideo = (video: Unterweisungsverweis) => {
+    const url = buildContentUrl(video)
+    if (!url) return
+    
+    // Mark as opened
+    if (!state.contentProgress[video.id]) {
+      dispatch({ type: 'SET_CONTENT_PROGRESS', contentId: video.id, opened: true })
+    }
+    
+    // Open video in new tab (SharePoint requires authentication)
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
   
   // Handle reference open from panel
@@ -690,7 +910,7 @@ export function ContentViewer() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {/* Main Content (Presentations, Videos) */}
+          {/* Main Content (Presentations) */}
           {mainContent.map((content) => {
             const url = buildContentUrl(content)
             return (
@@ -703,6 +923,13 @@ export function ContentViewer() {
               />
             )
           })}
+          
+          {/* Videos - Summary card that handles 0, 1, or multiple videos */}
+          <VideoSummaryCard
+            videos={videos}
+            openedCount={openedVideosCount}
+            onAction={handleVideoAction}
+          />
           
           {/* References */}
           {references.length > 0 && (
@@ -743,6 +970,15 @@ export function ContentViewer() {
         references={references}
         onOpenReference={handleOpenReference}
         openedRefs={openedRefsSet}
+      />
+      
+      {/* Video Selection Panel - for modules with multiple videos */}
+      <VideoSelectionPanel
+        isOpen={videoSelectionPanelOpen}
+        onClose={() => setVideoSelectionPanelOpen(false)}
+        videos={videos}
+        onSelectVideo={handleSelectVideo}
+        openedVideos={openedVideosSet}
       />
     </div>
   )
