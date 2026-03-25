@@ -30,6 +30,17 @@ import { appConfig } from '@/src/config/app.config'
 import type { QuarterModules, TrainingModule, Unterweisungsverweis, QuarterId, DocType } from '@/src/types/training'
 import { QUARTER_COLORS } from '@/src/types/training'
 import { cn } from '@/lib/utils'
+import { PDFViewer } from './PDFViewer'
+
+// Global EHS Grundlagen presentation
+const EHS_GRUNDLAGEN_PRESENTATION = {
+  id: 'ehs-grundlagen-global',
+  title: 'EHS Grundlagen Werk Bautzen',
+  subtitle: 'Umfassende Sicherheitsunterweisung',
+  description: 'Grundlegende EHS-Schulung mit allen wichtigen Themen: Arbeitssicherheit, Umweltschutz, Gefahrstoffe, PSA, Brandschutz und mehr.',
+  pdfUrl: '/presentations/EHS-Schulung_Bautzen.pdf',
+  lastUpdated: '09.12.2025',
+}
 
 /**
  * Get icon for document type
@@ -149,6 +160,79 @@ function VideoPlayerModal({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * EHS Grundlagen Presentation Card - Premium design for the global fundamentals presentation
+ */
+function EHSGrundlagenCard({
+  onOpen,
+}: {
+  onOpen: () => void
+}) {
+  return (
+    <Card
+      className={cn(
+        'group relative cursor-pointer overflow-hidden border-2 transition-all duration-300',
+        'bg-gradient-to-br from-primary/5 via-background to-primary/10',
+        'hover:shadow-xl hover:-translate-y-0.5 hover:border-primary/40',
+        'border-primary/20'
+      )}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+    >
+      {/* Accent bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />
+      
+      {/* Subtle pattern overlay */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle_at_1px_1px,_currentColor_1px,_transparent_1px)] bg-[length:24px_24px]" />
+      
+      <CardContent className="relative p-6">
+        <div className="flex items-start gap-4">
+          {/* Icon */}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
+            <Presentation className="h-6 w-6" />
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                  {EHS_GRUNDLAGEN_PRESENTATION.title}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {EHS_GRUNDLAGEN_PRESENTATION.subtitle}
+                </p>
+              </div>
+              <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+            
+            <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
+              {EHS_GRUNDLAGEN_PRESENTATION.description}
+            </p>
+            
+            <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60">
+                <FileText className="h-3 w-3" />
+                PDF Präsentation
+              </span>
+              <span>Stand: {EHS_GRUNDLAGEN_PRESENTATION.lastUpdated}</span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -468,6 +552,7 @@ export function ContentBrowser() {
   const [view, setView] = useState<BrowseView>('quarters')
   const [selectedQuarter, setSelectedQuarter] = useState<QuarterModules | null>(null)
   const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null)
+  const [showEHSGrundlagen, setShowEHSGrundlagen] = useState(false)
   
   // Load quarters
   useEffect(() => {
@@ -561,6 +646,35 @@ export function ContentBrowser() {
             />
           </div>
           
+          {/* EHS Grundlagen - Global Fundamentals Section */}
+          {!searchQuery && (
+            <div className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">EHS Grundlagen</h2>
+                  <p className="text-sm text-muted-foreground">Basis-Schulungsunterlagen</p>
+                </div>
+              </div>
+              <EHSGrundlagenCard onOpen={() => setShowEHSGrundlagen(true)} />
+            </div>
+          )}
+          
+          {/* Quarters Section Header */}
+          {!searchQuery && (
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <Search className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Quartalsmodule</h2>
+                <p className="text-sm text-muted-foreground">Themenspezifische Unterweisungen</p>
+              </div>
+            </div>
+          )}
+          
           {/* Quarters */}
           {searchQuery && filteredQuarters.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -613,6 +727,15 @@ export function ContentBrowser() {
           onBack={selectedQuarter ? handleBackToQuarter : handleBackToQuarters}
         />
       )}
+      
+      {/* EHS Grundlagen PDF Viewer */}
+      <PDFViewer
+        isOpen={showEHSGrundlagen}
+        onClose={() => setShowEHSGrundlagen(false)}
+        pdfUrl={EHS_GRUNDLAGEN_PRESENTATION.pdfUrl}
+        title={EHS_GRUNDLAGEN_PRESENTATION.title}
+        subtitle={EHS_GRUNDLAGEN_PRESENTATION.subtitle}
+      />
     </div>
   )
 }
