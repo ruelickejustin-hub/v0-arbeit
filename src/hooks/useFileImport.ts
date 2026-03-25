@@ -263,9 +263,8 @@ export function useFileImport(): UseFileImportReturn {
       }
       
       setParsedRows(validatedRows)
-    } catch (err) {
-      console.error('File parse error:', err)
-      setError('Fehler beim Lesen der Datei')
+      } catch {
+        setError('Fehler beim Lesen der Datei')
     } finally {
       setIsProcessing(false)
     }

@@ -413,8 +413,7 @@ export function CompletionConfirmation() {
           }
           break
       }
-    } catch (error) {
-      console.error('Export error:', error)
+    } catch {
       toast.error('Export fehlgeschlagen')
     }
   }

@@ -313,8 +313,8 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
       try {
         await provider.saveDraft(draft)
         dispatch({ type: 'SET_LAST_SAVED', timestamp: new Date().toISOString() })
-      } catch (error) {
-        console.error('Failed to save draft:', error)
+      } catch {
+        // Draft autosave failed - continue without saving
       }
     }
     
