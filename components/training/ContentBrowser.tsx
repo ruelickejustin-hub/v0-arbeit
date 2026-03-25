@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import {
-  ChevronLeft,
+  ArrowLeft,
   ChevronRight,
   Search,
   FileText,
   Video,
   Presentation,
-  ExternalLink,
   Play,
-  Download,
+  ExternalLink,
+  X,
   BookOpen,
-  AlertCircle,
+  Link as LinkIcon,
+  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -664,13 +665,13 @@ export function ContentBrowser() {
           
           {/* Quarters Section Header */}
           {!searchQuery && (
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                <Search className="h-5 w-5" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Calendar className="h-5 w-5" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold">Quartalsmodule</h2>
-                <p className="text-sm text-muted-foreground">Themenspezifische Unterweisungen</p>
+                <p className="text-sm text-muted-foreground">Unterweisungen nach Jahreszeitraum</p>
               </div>
             </div>
           )}

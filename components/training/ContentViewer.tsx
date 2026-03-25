@@ -42,6 +42,15 @@ import { getDataProvider } from '@/src/adapters'
 import { appConfig } from '@/src/config/app.config'
 import type { Unterweisungsverweis, DocType } from '@/src/types/training'
 import { cn } from '@/lib/utils'
+import { PDFViewer } from './PDFViewer'
+
+// EHS Grundlagen presentation - available in all modules
+const EHS_GRUNDLAGEN = {
+  id: 'ehs-grundlagen-training',
+  title: 'EHS Grundlagen Werk Bautzen',
+  subtitle: 'Basis-Sicherheitsschulung',
+  pdfUrl: '/presentations/EHS-Schulung_Bautzen.pdf',
+}
 
 /**
  * Get icon for document type
@@ -569,6 +578,76 @@ function VideoSummaryCard({
 }
 
 /**
+ * EHS Grundlagen Card - Links to the base EHS presentation PDF
+ */
+function EHSGrundlagenCard({
+  isOpened,
+  onOpen,
+}: {
+  isOpened: boolean
+  onOpen: () => void
+}) {
+  return (
+    <Card
+      className={cn(
+        'group relative cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-md',
+        isOpened 
+          ? 'border-2 border-success/50 bg-success/5' 
+          : 'border-2 border-primary/30 bg-primary/5 hover:border-primary/50'
+      )}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+    >
+      {/* Accent bar */}
+      <div className={cn(
+        'absolute left-0 top-0 bottom-0 w-1.5 transition-colors',
+        isOpened ? 'bg-success' : 'bg-primary'
+      )} />
+      
+      <CardContent className="flex items-center gap-4 p-4">
+        <div className={cn(
+          'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+          isOpened ? 'bg-success/15 text-success' : 'bg-primary/15 text-primary'
+        )}>
+          <Presentation className="h-5 w-5" />
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <h3 className={cn(
+            'font-medium',
+            isOpened ? 'text-success' : 'text-foreground'
+          )}>
+            {EHS_GRUNDLAGEN.title}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {EHS_GRUNDLAGEN.subtitle}
+          </p>
+        </div>
+        
+        <div className="flex shrink-0 items-center">
+          {isOpened ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
  * References Summary Card - Opens the references panel
  */
 function ReferencesSummaryCard({
@@ -703,6 +782,8 @@ export function ContentViewer() {
   const [selectedVideo, setSelectedVideo] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
   const [referencesPanelOpen, setReferencesPanelOpen] = useState(false)
   const [videoSelectionPanelOpen, setVideoSelectionPanelOpen] = useState(false)
+  const [ehsGrundlagenOpen, setEhsGrundlagenOpen] = useState(false)
+  const [ehsGrundlagenViewed, setEhsGrundlagenViewed] = useState(false)
   
   // Load content for the selected module
   useEffect(() => {
@@ -833,6 +914,12 @@ export function ContentViewer() {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
   
+  // Handle EHS Grundlagen open
+  const handleOpenEHSGrundlagen = () => {
+    setEhsGrundlagenOpen(true)
+    setEhsGrundlagenViewed(true)
+  }
+  
   // Handle reference open from panel
   const handleOpenReference = (ref: Unterweisungsverweis) => {
     const url = buildContentUrl(ref)
@@ -873,43 +960,77 @@ export function ContentViewer() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleGoBack}
-          className="-ml-2 mb-3"
+          className="-ml-2 mb-4 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
-          Zurück
+          Zurück zu Teilnehmern
         </Button>
-        <h1 className="text-xl font-semibold text-foreground">
-          {state.selectedModule?.ModuleTitle}
-        </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {state.participants.length} Teilnehmer · {new Date(state.trainingDate).toLocaleDateString('de-DE')}
-        </p>
+        
+        <div className="flex items-start gap-4">
+          <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <BookOpen className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground text-balance">
+              {state.selectedModule?.ModuleTitle}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-primary" />
+                {state.participants.length} Teilnehmer
+              </span>
+              <span className="hidden sm:inline text-border">|</span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4 text-primary" />
+                {new Date(state.trainingDate).toLocaleDateString('de-DE', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
       
-      {/* Progress */}
-      <div className="mb-6 flex items-center gap-3">
-        <Progress value={progressPercentage} className="h-1.5 flex-1" />
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {openedCount}/{totalCount}
-        </span>
-      </div>
+      {/* Progress Card */}
+      <Card className="mb-6 border-l-4 border-l-primary bg-muted/30">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Fortschritt</span>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {openedCount} von {totalCount} Inhalten
+            </span>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
+        </CardContent>
+      </Card>
       
       {/* Content List */}
       {contents.length === 0 ? (
-        <Card className="p-12 text-center">
-          <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-          <p className="font-medium text-foreground">Keine Inhalte verfügbar</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Für dieses Modul wurden keine Unterweisungsinhalte hinterlegt.
+        <Card className="rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Keine modulspezifischen Inhalte</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            Nutzen Sie die EHS Grundlagen Präsentation für die Basisschulung.
           </p>
         </Card>
       ) : (
         <div className="space-y-3">
+          {/* EHS Grundlagen - Base presentation available in all modules */}
+          <EHSGrundlagenCard
+            isOpened={ehsGrundlagenViewed}
+            onOpen={handleOpenEHSGrundlagen}
+          />
+          
           {/* Main Content (Presentations) */}
           {mainContent.map((content) => {
             const url = buildContentUrl(content)
@@ -943,8 +1064,20 @@ export function ContentViewer() {
       )}
       
       {/* Navigation */}
-      <div className="mt-10 flex items-center justify-end border-t pt-6">
-        <Button size="lg" onClick={handleProceedToCompletion} className="shadow-md">
+      <div className="mt-10 flex items-center justify-between border-t pt-6">
+        <Button 
+          variant="outline" 
+          onClick={handleGoBack}
+          className="hidden sm:flex"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück
+        </Button>
+        <Button 
+          size="lg" 
+          onClick={handleProceedToCompletion} 
+          className="shadow-md ml-auto"
+        >
           Zur Bestätigung
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
@@ -979,6 +1112,15 @@ export function ContentViewer() {
         videos={videos}
         onSelectVideo={handleSelectVideo}
         openedVideos={openedVideosSet}
+      />
+      
+      {/* EHS Grundlagen PDF Viewer */}
+      <PDFViewer
+        isOpen={ehsGrundlagenOpen}
+        onClose={() => setEhsGrundlagenOpen(false)}
+        pdfUrl={EHS_GRUNDLAGEN.pdfUrl}
+        title={EHS_GRUNDLAGEN.title}
+        subtitle={EHS_GRUNDLAGEN.subtitle}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { X, Maximize2, Minimize2, ExternalLink, ZoomIn, ZoomOut } from 'lucide-react'
+import { X, Maximize2, Minimize2, ExternalLink, ZoomIn, ZoomOut, Presentation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -60,15 +60,20 @@ export function PDFViewer({
         )}
       >
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 border-b bg-muted/30 px-4 py-3">
+        <DialogHeader className="flex-shrink-0 border-b bg-gradient-to-r from-primary/5 to-transparent px-4 py-3">
           <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="truncate text-lg">{title}</DialogTitle>
-              {subtitle && (
-                <DialogDescription className="truncate text-sm">
-                  {subtitle}
-                </DialogDescription>
-              )}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Presentation className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-lg font-semibold">{title}</DialogTitle>
+                {subtitle && (
+                  <DialogDescription className="truncate text-sm">
+                    {subtitle}
+                  </DialogDescription>
+                )}
+              </div>
             </div>
             
             {/* Toolbar */}
