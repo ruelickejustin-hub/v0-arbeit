@@ -19,7 +19,7 @@ import type {
   QuarterId,
 } from '@/src/types/training'
 import { QUARTER_TITLES } from '@/src/types/training'
-import { mockVerweise } from '@/src/mock-data/training-data'
+import { loadContentFromCSV, loadModulesFromContent, getContentForModule } from '@/src/data/content-loader'
 
 // In-memory storage for demo mode
 let termine: Unterweisungstermin[] = []
@@ -56,76 +56,23 @@ export const MockDataProvider: IDataProvider = {
   // ===========================================================================
   
   async getVerweise(): Promise<Unterweisungsverweis[]> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 100))
-    return mockVerweise
+    // Load from CSV file (real source of truth)
+    return loadContentFromCSV()
   },
   
   async getVerweiseByModule(moduleId: string): Promise<Unterweisungsverweis[]> {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    return mockVerweise.filter(
-      v => v.ModuleId === moduleId && v.ShowInTraining
-    ).sort((a, b) => a.SortOrder - b.SortOrder)
+    // Load content for specific module from CSV
+    return getContentForModule(moduleId)
   },
   
   async getModules(): Promise<TrainingModule[]> {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    const moduleMap = new Map<string, TrainingModule>()
-    
-    for (const verweis of mockVerweise) {
-      if (!moduleMap.has(verweis.ModuleId)) {
-        moduleMap.set(verweis.ModuleId, {
-          ModuleId: verweis.ModuleId,
-          ModuleTitle: verweis.ModuleTitle,
-          QuarterId: verweis.QuarterId,
-          QuarterTitle: verweis.QuarterTitle,
-          SortOrder: verweis.SortOrder,
-          ContentCount: 1,
-        })
-      } else {
-        const existing = moduleMap.get(verweis.ModuleId)!
-        existing.ContentCount++
-      }
-    }
-    
-    return Array.from(moduleMap.values()).sort((a, b) => {
-      if (a.QuarterId !== b.QuarterId) {
-        return a.QuarterId.localeCompare(b.QuarterId)
-      }
-      return a.ModuleId.localeCompare(b.ModuleId)
-    })
+    const quarters = await loadModulesFromContent()
+    return quarters.flatMap(q => q.modules)
   },
   
   async getModulesByQuarter(): Promise<QuarterModules[]> {
-    const modules = await this.getModules()
-    
-    // Define quarter order for main quarters
-    const quarterOrder: QuarterId[] = ['Q1', 'Q2', 'Q3', 'Q4']
-    
-    const grouped: Record<QuarterId, TrainingModule[]> = {
-      Q1: [],
-      Q2: [],
-      Q3: [],
-      Q4: [],
-      QX: [],
-      OUT: [],
-    }
-    
-    for (const module of modules) {
-      if (grouped[module.QuarterId]) {
-        grouped[module.QuarterId].push(module)
-      }
-    }
-    
-    // Return main quarters (Q1-Q4), filter out empty quarters except main ones
-    return quarterOrder
-      .map(quarterId => ({
-        quarterId,
-        quarterTitle: QUARTER_TITLES[quarterId],
-        modules: grouped[quarterId] || [],
-      }))
-      .filter(q => q.modules.length > 0 || quarterOrder.includes(q.quarterId))
+    // Load modules grouped by quarter from CSV
+    return loadModulesFromContent()
   },
   
   // ===========================================================================

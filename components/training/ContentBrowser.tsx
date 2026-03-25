@@ -69,8 +69,14 @@ function buildContentUrl(content: Unterweisungsverweis): string | null {
 
 /**
  * Check if video is embeddable
+ * Note: SharePoint videos require auth and can't be embedded
  */
 function isEmbeddableVideo(url: string): boolean {
+  // SharePoint videos require authentication
+  if (url.includes('sharepoint.com')) {
+    return false
+  }
+  
   return (
     url.includes('youtube.com') ||
     url.includes('youtu.be') ||

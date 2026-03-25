@@ -105,8 +105,15 @@ function buildContentUrl(content: Unterweisungsverweis): string | null {
 
 /**
  * Check if URL is a video that can be embedded
+ * Note: SharePoint video URLs contain .mp4 but need to open in new tab due to auth
  */
 function isEmbeddableVideo(url: string): boolean {
+  // SharePoint videos require authentication, so they can't be embedded
+  // They need to open in a new tab where the user is already logged in
+  if (url.includes('sharepoint.com')) {
+    return false
+  }
+  
   return (
     url.includes('youtube.com') ||
     url.includes('youtu.be') ||
@@ -540,23 +547,33 @@ export function ContentViewer() {
   }, [state.selectedModule])
   
   // Separate content by type
-  const { mainContent, references } = useMemo(() => {
+  // Videos and Presentations are main content
+  // Everything else (Referenzdokument, Monatsthema, Betriebsanweisung, etc.) are references
+  const { mainContent, references, videos } = useMemo(() => {
     const main: Unterweisungsverweis[] = []
     const refs: Unterweisungsverweis[] = []
+    const vids: Unterweisungsverweis[] = []
     
     for (const content of contents) {
-      if (content.DocCategory === 'Referenz' || content.DocType === 'Reference') {
-        refs.push(content)
-      } else {
+      // Videos are separated for the video action
+      if (content.DocType === 'Video') {
+        vids.push(content)
+        main.push(content) // Also show in main content
+      } else if (content.DocType === 'Presentation') {
         main.push(content)
+      } else {
+        // All document types go to references: Referenzdokument, Monatsthema, 
+        // Betriebsanweisung, Standard, Checkliste, EHS-PRO, Gefährdungsbeurteilung, etc.
+        refs.push(content)
       }
     }
     
     // Sort by SortOrder
     main.sort((a, b) => a.SortOrder - b.SortOrder)
     refs.sort((a, b) => a.SortOrder - b.SortOrder)
+    vids.sort((a, b) => a.SortOrder - b.SortOrder)
     
-    return { mainContent: main, references: refs }
+    return { mainContent: main, references: refs, videos: vids }
   }, [contents])
   
   // Calculate progress
