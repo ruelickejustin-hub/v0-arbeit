@@ -35,7 +35,7 @@ function formatModuleTitle(title: string): { line1: string; line2?: string } {
 }
 
 /**
- * Module Card Component - Clean, premium design with quarter color accents
+ * Module Card Component - Premium design with quarter color accents and hover effects
  */
 function ModuleCard({ 
   module, 
@@ -53,11 +53,11 @@ function ModuleCard({
   return (
     <Card
       className={cn(
-        'group relative cursor-pointer overflow-hidden border transition-all duration-200',
-        'hover:shadow-lg',
+        'group relative cursor-pointer overflow-hidden border-2 transition-all duration-300',
+        'hover:shadow-xl hover:-translate-y-0.5',
         isSelected 
-          ? `border-2 ${quarterColors.accentBorder} ${quarterColors.accentBg} shadow-md` 
-          : 'border-border/50 bg-card shadow-sm hover:border-border hover:shadow-md'
+          ? `${quarterColors.accentBorder} ${quarterColors.accentBg} shadow-lg ring-2 ring-offset-2 ${quarterColors.accentBorder}` 
+          : 'border-border/40 bg-card shadow-sm hover:border-primary/30 hover:shadow-lg'
       )}
       onClick={() => onSelect(module)}
       role="button"
@@ -70,30 +70,45 @@ function ModuleCard({
       }}
     >
       {/* Selection indicator bar using quarter color */}
-      {isSelected && (
-        <div className={cn('absolute left-0 top-0 bottom-0 w-1', quarterColors.accent)} />
-      )}
+      <div className={cn(
+        'absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300',
+        isSelected ? quarterColors.accent : 'bg-transparent group-hover:bg-primary/20'
+      )} />
       
-      <div className="flex items-center justify-between gap-4 p-5">
+      {/* Subtle gradient overlay on hover */}
+      <div className={cn(
+        'absolute inset-0 opacity-0 transition-opacity duration-300',
+        'bg-gradient-to-br from-transparent via-transparent to-primary/5',
+        'group-hover:opacity-100',
+        isSelected && 'opacity-100'
+      )} />
+      
+      <div className="relative flex items-center justify-between gap-4 p-5">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold leading-snug text-balance text-foreground">
+          <h3 className={cn(
+            'text-base font-semibold leading-snug text-balance transition-colors',
+            isSelected ? 'text-foreground' : 'text-foreground group-hover:text-primary'
+          )}>
             {line1}
           </h3>
           {line2 && (
-            <p className="mt-1 text-sm text-muted-foreground leading-snug">
+            <p className="mt-1.5 text-sm text-muted-foreground leading-snug">
               {line2}
             </p>
           )}
         </div>
         
-        {/* Arrow indicator with quarter color when selected */}
+        {/* Arrow indicator with animated background */}
         <div className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
           isSelected
-            ? `${quarterColors.accent} text-white`
-            : 'bg-muted/50 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
+            ? `${quarterColors.accent} text-white shadow-md`
+            : 'bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-md'
         )}>
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className={cn(
+            'h-5 w-5 transition-transform duration-300',
+            'group-hover:translate-x-0.5'
+          )} />
         </div>
       </div>
     </Card>
@@ -101,7 +116,7 @@ function ModuleCard({
 }
 
 /**
- * Quarter Section Component with quarter-specific color accents
+ * Quarter Section Component with quarter-specific color accents - Enhanced design
  */
 function QuarterSection({
   quarter,
@@ -113,16 +128,31 @@ function QuarterSection({
   selectedModuleId: string | null
 }) {
   const quarterColors = QUARTER_COLORS[quarter.quarterId]
+  const moduleCount = quarter.modules.length
   
   return (
-    <section className="mb-10">
-      <div className="mb-5 flex items-center gap-3">
-        <div className={cn('h-7 w-1.5 rounded-full', quarterColors.accent)} />
-        <h2 className={cn('text-lg font-semibold', quarterColors.accentText)}>
-          {quarter.quarterTitle}
-        </h2>
+    <section className="mb-12">
+      {/* Enhanced section header with background accent */}
+      <div className={cn(
+        'mb-6 flex items-center gap-4 rounded-xl p-4 -mx-2',
+        quarterColors.accentBg
+      )}>
+        <div className={cn(
+          'flex h-12 w-12 items-center justify-center rounded-xl font-bold text-lg shadow-sm',
+          quarterColors.accent, 'text-white'
+        )}>
+          {quarter.quarterId.replace('Q', '')}
+        </div>
+        <div className="flex-1">
+          <h2 className={cn('text-lg font-bold', quarterColors.accentText)}>
+            {quarter.quarterTitle}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {moduleCount} {moduleCount === 1 ? 'Modul' : 'Module'} verfügbar
+          </p>
+        </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {quarter.modules.map((module) => (
           <ModuleCard
             key={module.ModuleId}
@@ -225,36 +255,57 @@ export function ModuleSelection() {
   
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">
-          Unterweisungsmodul auswählen
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Wählen Sie das Modul für die heutige Unterweisung aus.
-        </p>
+      {/* Enhanced Header with visual accent */}
+      <div className="mb-10">
+        <div className="flex items-start gap-4">
+          <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Search className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-balance">
+              Unterweisungsmodul auswählen
+            </h1>
+            <p className="mt-2 text-muted-foreground max-w-xl">
+              Wählen Sie das Modul für die heutige Unterweisung aus. Die Module sind nach Quartalen organisiert.
+            </p>
+          </div>
+        </div>
       </div>
       
-      {/* Search */}
-      <div className="relative mb-8 max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* Enhanced Search with better visibility */}
+      <div className="relative mb-10 max-w-lg">
+        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Module durchsuchen..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="h-12 pl-12 text-base rounded-xl border-2 border-border/50 focus:border-primary shadow-sm"
         />
       </div>
       
       {/* Modules by Quarter */}
       {filteredQuarters.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          <p className="text-muted-foreground">
+        <div className="rounded-2xl border-2 border-dashed border-border/60 bg-muted/30 p-16 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Search className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {searchQuery ? 'Keine Treffer' : 'Keine Module'}
+          </h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
             {searchQuery
-              ? 'Keine Module gefunden für Ihre Suche.'
-              : 'Keine Module verfügbar.'}
+              ? `Keine Module gefunden für "${searchQuery}". Versuchen Sie einen anderen Suchbegriff.`
+              : 'Derzeit sind keine Unterweisungsmodule verfügbar.'}
           </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-4 text-sm font-medium text-primary hover:underline"
+            >
+              Suche zurücksetzen
+            </button>
+          )}
         </div>
       ) : (
         filteredQuarters.map((quarter) => (
