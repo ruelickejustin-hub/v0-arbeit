@@ -14,11 +14,11 @@ import {
   Download,
   Users,
   Calendar,
-  RotateCcw,
   X,
   AlertCircle,
   BookOpen,
   ChevronRight,
+  Maximize2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -42,6 +42,7 @@ import { getDataProvider } from '@/src/adapters'
 import { appConfig } from '@/src/config/app.config'
 import type { Unterweisungsverweis, DocType } from '@/src/types/training'
 import { cn } from '@/lib/utils'
+import { PdfPresentationViewer } from './PdfPresentationViewer'
 
 /**
  * Get icon for document type
@@ -104,12 +105,17 @@ function buildContentUrl(content: Unterweisungsverweis): string | null {
 }
 
 /**
+ * Check if URL is a PDF that can be embedded
+ */
+function isPdfUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase()
+  return lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf?')
+}
+
+/**
  * Check if URL is a video that can be embedded
- * Note: SharePoint video URLs contain .mp4 but need to open in new tab due to auth
  */
 function isEmbeddableVideo(url: string): boolean {
-  // SharePoint videos require authentication, so they can't be embedded
-  // They need to open in a new tab where the user is already logged in
   if (url.includes('sharepoint.com')) {
     return false
   }
@@ -196,6 +202,38 @@ function VideoPlayerModal({
             </div>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * PDF Presentation Modal (Fullscreen capable)
+ */
+function PdfPresentationModal({
+  isOpen,
+  onClose,
+  content,
+  url,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  content: Unterweisungsverweis
+  url: string
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{content.LinkLabel || content.Title}</DialogTitle>
+          <DialogDescription>PDF-Präsentation</DialogDescription>
+        </DialogHeader>
+        <PdfPresentationViewer
+          url={url}
+          title={content.LinkLabel || content.Title}
+          onClose={onClose}
+          className="h-full rounded-none border-0"
+        />
       </DialogContent>
     </Dialog>
   )
@@ -294,11 +332,13 @@ function ContentCard({
   isOpened,
   onAction,
   hasUrl,
+  isPdf,
 }: {
   content: Unterweisungsverweis
   isOpened: boolean
   onAction: () => void
   hasUrl: boolean
+  isPdf?: boolean
 }) {
   const Icon = getDocTypeIcon(content.DocType)
   const colorClasses = getDocTypeColors(content.DocType)
@@ -307,6 +347,7 @@ function ContentCard({
   // Determine action icon based on type
   const getActionIcon = () => {
     if (!hasUrl) return AlertCircle
+    if (isPdf) return Maximize2
     switch (content.DocType) {
       case 'Video':
         return Play
@@ -364,6 +405,11 @@ function ContentCard({
           )}>
             {displayTitle}
           </h3>
+          {isPdf && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              PDF-Präsentation
+            </p>
+          )}
           {!hasUrl && (
             <p className="text-xs text-muted-foreground mt-0.5">Nicht verfügbar</p>
           )}
@@ -524,6 +570,8 @@ export function ContentViewer() {
   // Modal/Panel state
   const [videoModalOpen, setVideoModalOpen] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [selectedPdf, setSelectedPdf] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
   const [referencesPanelOpen, setReferencesPanelOpen] = useState(false)
   
   // Load content for the selected module
@@ -547,23 +595,18 @@ export function ContentViewer() {
   }, [state.selectedModule])
   
   // Separate content by type
-  // Videos and Presentations are main content
-  // Everything else (Referenzdokument, Monatsthema, Betriebsanweisung, etc.) are references
-  const { mainContent, references, videos } = useMemo(() => {
+  const { mainContent, references, presentations } = useMemo(() => {
     const main: Unterweisungsverweis[] = []
     const refs: Unterweisungsverweis[] = []
-    const vids: Unterweisungsverweis[] = []
+    const pres: Unterweisungsverweis[] = []
     
     for (const content of contents) {
-      // Videos are separated for the video action
       if (content.DocType === 'Video') {
-        vids.push(content)
-        main.push(content) // Also show in main content
+        main.push(content)
       } else if (content.DocType === 'Presentation') {
+        pres.push(content)
         main.push(content)
       } else {
-        // All document types go to references: Referenzdokument, Monatsthema, 
-        // Betriebsanweisung, Standard, Checkliste, EHS-PRO, Gefährdungsbeurteilung, etc.
         refs.push(content)
       }
     }
@@ -571,10 +614,22 @@ export function ContentViewer() {
     // Sort by SortOrder
     main.sort((a, b) => a.SortOrder - b.SortOrder)
     refs.sort((a, b) => a.SortOrder - b.SortOrder)
-    vids.sort((a, b) => a.SortOrder - b.SortOrder)
+    pres.sort((a, b) => a.SortOrder - b.SortOrder)
     
-    return { mainContent: main, references: refs, videos: vids }
+    return { mainContent: main, references: refs, presentations: pres }
   }, [contents])
+  
+  // Get first PDF presentation for the embedded viewer
+  const primaryPresentation = useMemo(() => {
+    const pdfPres = presentations.find(p => {
+      const url = buildContentUrl(p)
+      return url && isPdfUrl(url)
+    })
+    if (pdfPres) {
+      return { content: pdfPres, url: buildContentUrl(pdfPres)! }
+    }
+    return null
+  }, [presentations])
   
   // Calculate progress
   const openedCount = Object.values(state.contentProgress).filter(Boolean).length
@@ -606,6 +661,14 @@ export function ContentViewer() {
         break
         
       case 'Presentation':
+        if (isPdfUrl(url)) {
+          setSelectedPdf({ content, url })
+          setPdfModalOpen(true)
+        } else {
+          window.open(url, '_blank', 'noopener,noreferrer')
+        }
+        break
+        
       case 'Document':
       default:
         window.open(url, '_blank', 'noopener,noreferrer')
@@ -624,11 +687,6 @@ export function ContentViewer() {
     }
     
     window.open(url, '_blank', 'noopener,noreferrer')
-  }
-  
-  // Reset progress
-  const handleResetProgress = () => {
-    dispatch({ type: 'RESET_CONTENT_PROGRESS' })
   }
   
   // Navigation
@@ -679,6 +737,37 @@ export function ContentViewer() {
         </span>
       </div>
       
+      {/* Primary PDF Presentation Viewer (if available) */}
+      {primaryPresentation && (
+        <div className="mb-6">
+          <PdfPresentationViewer
+            url={primaryPresentation.url}
+            title={primaryPresentation.content.LinkLabel || primaryPresentation.content.Title}
+            className="min-h-[450px]"
+          />
+          {/* Mark as opened when viewer is shown */}
+          {!state.contentProgress[primaryPresentation.content.id] && (
+            <div className="mt-2 text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  dispatch({ 
+                    type: 'SET_CONTENT_PROGRESS', 
+                    contentId: primaryPresentation.content.id, 
+                    opened: true 
+                  })
+                }}
+                className="text-muted-foreground"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Als angesehen markieren
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Content List */}
       {contents.length === 0 ? (
         <Card className="p-12 text-center">
@@ -690,19 +779,23 @@ export function ContentViewer() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {/* Main Content (Presentations, Videos) */}
-          {mainContent.map((content) => {
-            const url = buildContentUrl(content)
-            return (
-              <ContentCard
-                key={content.id}
-                content={content}
-                isOpened={!!state.contentProgress[content.id]}
-                onAction={() => handleContentAction(content)}
-                hasUrl={!!url}
-              />
-            )
-          })}
+          {/* Main Content (Presentations, Videos) - exclude primary PDF as it's shown above */}
+          {mainContent
+            .filter(c => !(primaryPresentation && c.id === primaryPresentation.content.id))
+            .map((content) => {
+              const url = buildContentUrl(content)
+              const isPdf = url ? isPdfUrl(url) : false
+              return (
+                <ContentCard
+                  key={content.id}
+                  content={content}
+                  isOpened={!!state.contentProgress[content.id]}
+                  onAction={() => handleContentAction(content)}
+                  hasUrl={!!url}
+                  isPdf={isPdf}
+                />
+              )
+            })}
           
           {/* References */}
           {references.length > 0 && (
@@ -733,6 +826,19 @@ export function ContentViewer() {
           }}
           content={selectedVideo.content}
           url={selectedVideo.url}
+        />
+      )}
+      
+      {/* PDF Presentation Modal */}
+      {selectedPdf && (
+        <PdfPresentationModal
+          isOpen={pdfModalOpen}
+          onClose={() => {
+            setPdfModalOpen(false)
+            setSelectedPdf(null)
+          }}
+          content={selectedPdf.content}
+          url={selectedPdf.url}
         />
       )}
       
