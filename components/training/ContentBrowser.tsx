@@ -13,6 +13,8 @@ import {
   Download,
   BookOpen,
   AlertCircle,
+  Maximize2,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -108,6 +110,104 @@ function getYouTubeEmbedUrl(url: string): string | null {
     return `https://www.youtube.com/embed/${videoIdMatch[1]}?autoplay=1`
   }
   return null
+}
+
+/**
+ * Presentation Modal for PDF viewing with fullscreen support
+ */
+function PresentationModal({
+  isOpen,
+  onClose,
+  content,
+  url,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  content: Unterweisungsverweis
+  url: string
+}) {
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useState<HTMLDivElement | null>(null)
+  
+  const handleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+        setIsFullscreen(true)
+      } else {
+        await document.exitFullscreen()
+        setIsFullscreen(false)
+      }
+    } catch {
+      // Fallback: open in new tab
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+  
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+  
+  const isPdf = url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf?')
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="p-4 pb-2 flex-shrink-0 border-b">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg">{content.LinkLabel || content.Title}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Öffnen
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleFullscreen}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Maximize2 className="mr-2 h-4 w-4" />
+                Vollbild
+              </Button>
+            </div>
+          </div>
+          <DialogDescription className="sr-only">
+            Präsentation im Vollbildmodus anzeigen
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 bg-muted/30 overflow-hidden">
+          {isPdf ? (
+            <iframe
+              src={`${url}#view=FitH`}
+              className="w-full h-full border-0"
+              title={content.Title}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center p-8">
+                <Presentation className="mx-auto h-16 w-16 mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground mb-4">
+                  PowerPoint-Dateien können nicht direkt eingebettet werden.
+                </p>
+                <Button onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Präsentation öffnen
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 /**
@@ -253,6 +353,7 @@ function ModuleDetail({
   const [contents, setContents] = useState<Unterweisungsverweis[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [videoModal, setVideoModal] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
+  const [presentationModal, setPresentationModal] = useState<{ content: Unterweisungsverweis; url: string } | null>(null)
   
   useEffect(() => {
     async function loadContent() {
@@ -289,6 +390,10 @@ function ModuleDetail({
     setVideoModal({ content, url })
   }
   
+  const handleStartPresentation = (content: Unterweisungsverweis, url: string) => {
+    setPresentationModal({ content, url })
+  }
+  
   return (
     <div>
       {/* Back Button */}
@@ -317,9 +422,14 @@ function ModuleDetail({
           {presentations.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Präsentationen</h3>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {presentations.map(c => (
-                  <BrowseContentItem key={c.id} content={c} onOpenVideo={handleOpenVideo} />
+                  <BrowseContentItem 
+                    key={c.id} 
+                    content={c} 
+                    onOpenVideo={handleOpenVideo} 
+                    onStartPresentation={handleStartPresentation}
+                  />
                 ))}
               </div>
             </div>
@@ -356,6 +466,16 @@ function ModuleDetail({
           onClose={() => setVideoModal(null)}
           content={videoModal.content}
           url={videoModal.url}
+        />
+      )}
+      
+      {/* Presentation Modal */}
+      {presentationModal && (
+        <PresentationModal
+          isOpen={true}
+          onClose={() => setPresentationModal(null)}
+          content={presentationModal.content}
+          url={presentationModal.url}
         />
       )}
     </div>
