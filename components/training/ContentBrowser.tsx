@@ -32,6 +32,19 @@ import { QUARTER_COLORS } from '@/src/types/training'
 import { cn } from '@/lib/utils'
 
 /**
+ * Check if URL is a presentation file (PDF or PPTX)
+ */
+function isPresentationUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.endsWith('.pdf') || 
+    lowerUrl.includes('.pdf?') ||
+    lowerUrl.endsWith('.pptx') ||
+    lowerUrl.endsWith('.ppt')
+  )
+}
+
+/**
  * Get icon for document type
  */
 function getDocTypeIcon(docType: DocType) {
@@ -158,13 +171,16 @@ function VideoPlayerModal({
 function BrowseContentItem({
   content,
   onOpenVideo,
+  onStartPresentation,
 }: {
   content: Unterweisungsverweis
   onOpenVideo: (content: Unterweisungsverweis, url: string) => void
+  onStartPresentation?: (content: Unterweisungsverweis, url: string) => void
 }) {
   const Icon = getDocTypeIcon(content.DocType)
   const url = buildContentUrl(content)
   const isAvailable = !!url
+  const isPresentation = content.DocType === 'Presentation' && isAvailable && url && isPresentationUrl(url)
   const displayTitle = content.LinkLabel || content.FileName || content.Title
   
   const handleClick = () => {
@@ -172,13 +188,14 @@ function BrowseContentItem({
     
     if (content.DocType === 'Video' && isEmbeddableVideo(url)) {
       onOpenVideo(content, url)
-    } else {
+    } else if (!isPresentation) {
       window.open(url, '_blank', 'noopener,noreferrer')
     }
   }
   
   const getActionIcon = () => {
     if (!isAvailable) return AlertCircle
+    if (isPresentation) return Presentation
     if (content.DocType === 'Video') return Play
     if (content.OpenMode === 'download') return Download
     return ExternalLink
@@ -189,31 +206,36 @@ function BrowseContentItem({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-3 rounded-lg border transition-all',
+        'flex flex-col gap-2 p-3 rounded-lg border transition-all',
         isAvailable 
-          ? 'cursor-pointer hover:bg-muted/50 hover:border-primary/30' 
-          : 'opacity-50 cursor-not-allowed'
+          ? 'hover:bg-muted/50 hover:border-primary/30' 
+          : 'opacity-50'
       )}
-      onClick={handleClick}
-      role={isAvailable ? 'button' : undefined}
-      tabIndex={isAvailable ? 0 : -1}
-      onKeyDown={(e) => {
-        if (isAvailable && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault()
-          handleClick()
-        }
-      }}
     >
-      <div className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-        content.DocType === 'Video' && 'bg-destructive/10 text-destructive',
-        content.DocType === 'Presentation' && 'bg-primary/10 text-primary',
-        (content.DocType === 'Document' || content.DocType === 'Reference') && 'bg-warning/10 text-warning'
-      )}>
-        <Icon className="h-4 w-4" />
+      <div className="flex items-center gap-3 cursor-pointer" onClick={handleClick}>
+        <div className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+          content.DocType === 'Video' && 'bg-destructive/10 text-destructive',
+          content.DocType === 'Presentation' && 'bg-primary/10 text-primary',
+          (content.DocType === 'Document' || content.DocType === 'Reference') && 'bg-warning/10 text-warning'
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-sm font-medium truncate">{displayTitle}</span>
+        <ActionIcon className={cn('h-4 w-4', isAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50')} />
       </div>
-      <span className="flex-1 text-sm font-medium truncate">{displayTitle}</span>
-      <ActionIcon className={cn('h-4 w-4', isAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50')} />
+      
+      {/* Presentation button */}
+      {isPresentation && onStartPresentation && (
+        <Button
+          size="sm"
+          className="w-full justify-center bg-primary hover:bg-primary/90"
+          onClick={() => onStartPresentation(content, url)}
+        >
+          <Presentation className="mr-2 h-4 w-4" />
+          Präsentation starten
+        </Button>
+      )}
     </div>
   )
 }
