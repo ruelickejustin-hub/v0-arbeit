@@ -113,6 +113,19 @@ function isPdfUrl(url: string): boolean {
 }
 
 /**
+ * Check if URL is a presentation file (PDF or PPTX)
+ */
+function isPresentationUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.endsWith('.pdf') || 
+    lowerUrl.includes('.pdf?') ||
+    lowerUrl.endsWith('.pptx') ||
+    lowerUrl.endsWith('.ppt')
+  )
+}
+
+/**
  * Check if URL is a video that can be embedded
  */
 function isEmbeddableVideo(url: string): boolean {
@@ -511,6 +524,113 @@ function ReferencesSummaryCard({
 }
 
 /**
+ * Prominent Presentation Start Card
+ * Shows a large, clearly visible button to start the presentation
+ */
+function PresentationStartCard({
+  presentation,
+  isPdf,
+  isOpened,
+  onStartPresentation,
+  onOpenInNewTab,
+  onMarkAsViewed,
+}: {
+  presentation: Unterweisungsverweis
+  isPdf: boolean
+  isOpened: boolean
+  onStartPresentation: () => void
+  onOpenInNewTab: () => void
+  onMarkAsViewed: () => void
+}) {
+  const title = presentation.LinkLabel || presentation.Title
+
+  return (
+    <Card className={cn(
+      'relative overflow-hidden transition-all',
+      isOpened 
+        ? 'border-success/50 bg-gradient-to-br from-success/5 to-success/10' 
+        : 'border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10'
+    )}>
+      {/* Success indicator */}
+      {isOpened && (
+        <div className="absolute right-3 top-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success text-success-foreground">
+            <Check className="h-4 w-4" />
+          </div>
+        </div>
+      )}
+      
+      <CardContent className="p-6">
+        {/* Icon and Title */}
+        <div className="flex items-start gap-4 mb-6">
+          <div className={cn(
+            'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl',
+            isOpened ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary'
+          )}>
+            <Presentation className="h-7 w-7" />
+          </div>
+          <div className="flex-1 min-w-0 pt-1">
+            <h3 className={cn(
+              'text-lg font-semibold leading-tight',
+              isOpened ? 'text-success' : 'text-foreground'
+            )}>
+              {title}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isPdf ? 'PDF-Präsentation' : 'PowerPoint-Präsentation'}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Primary: Start Presentation */}
+          <Button
+            size="lg"
+            onClick={onStartPresentation}
+            className={cn(
+              'flex-1 min-w-[200px] h-12 text-base font-semibold shadow-md transition-all hover:shadow-lg',
+              isOpened 
+                ? 'bg-success hover:bg-success/90' 
+                : 'bg-primary hover:bg-primary/90'
+            )}
+          >
+            <Maximize2 className="mr-2 h-5 w-5" />
+            Präsentation starten
+          </Button>
+
+          {/* Secondary: Open in new tab */}
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onOpenInNewTab}
+            className="h-12"
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Öffnen
+          </Button>
+        </div>
+
+        {/* Mark as viewed (if not already) */}
+        {!isOpened && (
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onMarkAsViewed}
+              className="text-muted-foreground hover:text-foreground w-full justify-center"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Als angesehen markieren
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
  * Content Viewer Loading Skeleton
  */
 function ContentViewerSkeleton() {
@@ -619,14 +739,19 @@ export function ContentViewer() {
     return { mainContent: main, references: refs, presentations: pres }
   }, [contents])
   
-  // Get first PDF presentation for the embedded viewer
+  // Get first presentation (PDF or PPTX) for the prominent display
   const primaryPresentation = useMemo(() => {
-    const pdfPres = presentations.find(p => {
+    const pres = presentations.find(p => {
       const url = buildContentUrl(p)
-      return url && isPdfUrl(url)
+      return url && isPresentationUrl(url)
     })
-    if (pdfPres) {
-      return { content: pdfPres, url: buildContentUrl(pdfPres)! }
+    if (pres) {
+      const url = buildContentUrl(pres)!
+      return { 
+        content: pres, 
+        url,
+        isPdf: isPdfUrl(url)
+      }
     }
     return null
   }, [presentations])
@@ -737,34 +862,49 @@ export function ContentViewer() {
         </span>
       </div>
       
-      {/* Primary PDF Presentation Viewer (if available) */}
+      {/* Primary Presentation Card with prominent "Start Presentation" button */}
       {primaryPresentation && (
         <div className="mb-6">
-          <PdfPresentationViewer
-            url={primaryPresentation.url}
-            title={primaryPresentation.content.LinkLabel || primaryPresentation.content.Title}
-            className="min-h-[450px]"
+          <PresentationStartCard
+            presentation={primaryPresentation.content}
+            isPdf={primaryPresentation.isPdf}
+            isOpened={!!state.contentProgress[primaryPresentation.content.id]}
+            onStartPresentation={() => {
+              // Mark as opened
+              if (!state.contentProgress[primaryPresentation.content.id]) {
+                dispatch({ 
+                  type: 'SET_CONTENT_PROGRESS', 
+                  contentId: primaryPresentation.content.id, 
+                  opened: true 
+                })
+              }
+              
+              // For PDFs, open in modal; for PPTX, open in new tab
+              if (primaryPresentation.isPdf) {
+                setSelectedPdf({ content: primaryPresentation.content, url: primaryPresentation.url })
+                setPdfModalOpen(true)
+              } else {
+                window.open(primaryPresentation.url, '_blank', 'noopener,noreferrer')
+              }
+            }}
+            onOpenInNewTab={() => {
+              if (!state.contentProgress[primaryPresentation.content.id]) {
+                dispatch({ 
+                  type: 'SET_CONTENT_PROGRESS', 
+                  contentId: primaryPresentation.content.id, 
+                  opened: true 
+                })
+              }
+              window.open(primaryPresentation.url, '_blank', 'noopener,noreferrer')
+            }}
+            onMarkAsViewed={() => {
+              dispatch({ 
+                type: 'SET_CONTENT_PROGRESS', 
+                contentId: primaryPresentation.content.id, 
+                opened: true 
+              })
+            }}
           />
-          {/* Mark as opened when viewer is shown */}
-          {!state.contentProgress[primaryPresentation.content.id] && (
-            <div className="mt-2 text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  dispatch({ 
-                    type: 'SET_CONTENT_PROGRESS', 
-                    contentId: primaryPresentation.content.id, 
-                    opened: true 
-                  })
-                }}
-                className="text-muted-foreground"
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Als angesehen markieren
-              </Button>
-            </div>
-          )}
         </div>
       )}
       
