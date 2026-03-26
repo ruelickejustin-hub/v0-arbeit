@@ -260,12 +260,14 @@ function ReferencesPanel({
   onClose,
   references,
   onOpenReference,
+  onStartPresentation,
   openedRefs,
 }: {
   isOpen: boolean
   onClose: () => void
   references: Unterweisungsverweis[]
   onOpenReference: (ref: Unterweisungsverweis) => void
+  onStartPresentation: (ref: Unterweisungsverweis, url: string) => void
   openedRefs: Set<string>
 }) {
   return (
@@ -288,43 +290,63 @@ function ReferencesPanel({
               const refUrl = buildContentUrl(ref)
               const isAvailable = !!refUrl
               const isOpened = openedRefs.has(ref.id)
+              const isPdfFile = refUrl && isPdfUrl(refUrl)
               
               return (
                 <Card
                   key={ref.id}
                   className={cn(
-                    'cursor-pointer transition-all',
+                    'transition-all',
                     isAvailable 
                       ? 'hover:shadow-md hover:border-primary/40' 
-                      : 'opacity-60 cursor-not-allowed',
+                      : 'opacity-60',
                     isOpened && 'border-success/50 bg-success/5'
                   )}
-                  onClick={() => isAvailable && onOpenReference(ref)}
                 >
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                      isOpened ? 'bg-success/15 text-success' : 'bg-warning/10 text-warning'
-                    )}>
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        'font-medium truncate',
-                        isOpened ? 'text-success' : 'text-foreground'
+                  <CardContent className="p-4">
+                    <div 
+                      className={cn(
+                        "flex items-center gap-3",
+                        isAvailable && 'cursor-pointer'
+                      )}
+                      onClick={() => isAvailable && onOpenReference(ref)}
+                    >
+                      <div className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                        isOpened ? 'bg-success/15 text-success' : 'bg-warning/10 text-warning'
                       )}>
-                        {ref.LinkLabel || ref.FileName || ref.Title}
-                      </p>
-                      {!isAvailable && (
-                        <p className="text-xs text-muted-foreground">Nicht verfügbar</p>
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          'font-medium truncate',
+                          isOpened ? 'text-success' : 'text-foreground'
+                        )}>
+                          {ref.LinkLabel || ref.FileName || ref.Title}
+                        </p>
+                        {!isAvailable && (
+                          <p className="text-xs text-muted-foreground">Nicht verfügbar</p>
+                        )}
+                      </div>
+                      {isOpened ? (
+                        <Check className="h-4 w-4 text-success" />
+                      ) : isAvailable ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                    {isOpened ? (
-                      <Check className="h-4 w-4 text-success" />
-                    ) : isAvailable ? (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    
+                    {/* Präsentation starten Button for PDF files */}
+                    {isPdfFile && refUrl && (
+                      <Button
+                        size="sm"
+                        className="w-full mt-3 bg-primary hover:bg-primary/90"
+                        onClick={() => onStartPresentation(ref, refUrl)}
+                      >
+                        <Maximize2 className="mr-2 h-4 w-4" />
+                        Präsentation starten
+                      </Button>
                     )}
                   </CardContent>
                 </Card>
@@ -378,17 +400,18 @@ function ContentCard({
     <Card
       className={cn(
         'group relative overflow-hidden transition-all duration-200',
-        hasUrl ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-70',
+        hasUrl && !isPdf ? 'cursor-pointer hover:shadow-md' : '',
+        !hasUrl && 'cursor-not-allowed opacity-70',
         isOpened 
           ? 'border-2 border-success/50 bg-success/5 shadow-sm shadow-success/10' 
           : 'border border-border/60 bg-card',
         hasUrl && !isOpened && 'hover:border-primary/40'
       )}
-      onClick={() => hasUrl && onAction()}
-      role="button"
-      tabIndex={hasUrl ? 0 : -1}
+      onClick={() => hasUrl && !isPdf && onAction()}
+      role={hasUrl && !isPdf ? "button" : undefined}
+      tabIndex={hasUrl && !isPdf ? 0 : -1}
       onKeyDown={(e) => {
-        if (hasUrl && (e.key === 'Enter' || e.key === ' ')) {
+        if (hasUrl && !isPdf && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault()
           onAction()
         }
@@ -399,52 +422,74 @@ function ContentCard({
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-success" />
       )}
       
-      <CardContent className="flex items-center gap-4 p-4">
-        {/* Icon */}
-        <div
-          className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors',
-            isOpened ? 'bg-success/15 text-success' : colorClasses
-          )}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
-        
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          <h3 className={cn(
-            'font-medium leading-snug text-balance',
-            isOpened ? 'text-success' : 'text-foreground'
-          )}>
-            {displayTitle}
-          </h3>
-          {isPdf && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              PDF-Präsentation
-            </p>
-          )}
-          {!hasUrl && (
-            <p className="text-xs text-muted-foreground mt-0.5">Nicht verfügbar</p>
-          )}
-        </div>
-        
-        {/* Action indicator */}
-        <div className="flex shrink-0 items-center">
-          {isOpened ? (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
-              <Check className="h-4 w-4" />
-            </div>
-          ) : (
-            <div className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-              hasUrl 
-                ? 'bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
-                : 'bg-muted/40 text-muted-foreground/50'
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          {/* Icon */}
+          <div
+            className={cn(
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors',
+              isOpened ? 'bg-success/15 text-success' : colorClasses
+            )}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+          
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            <h3 className={cn(
+              'font-medium leading-snug text-balance',
+              isOpened ? 'text-success' : 'text-foreground'
             )}>
-              <ActionIcon className="h-4 w-4" />
-            </div>
-          )}
+              {displayTitle}
+            </h3>
+            {isPdf && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                PDF-Präsentation
+              </p>
+            )}
+            {!hasUrl && (
+              <p className="text-xs text-muted-foreground mt-0.5">Nicht verfügbar</p>
+            )}
+          </div>
+          
+          {/* Action indicator */}
+          <div className="flex shrink-0 items-center">
+            {isOpened ? (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground">
+                <Check className="h-4 w-4" />
+              </div>
+            ) : !isPdf && (
+              <div className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                hasUrl 
+                  ? 'bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
+                  : 'bg-muted/40 text-muted-foreground/50'
+              )}>
+                <ActionIcon className="h-4 w-4" />
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Prominent "Präsentation starten" button for PDFs */}
+        {isPdf && hasUrl && (
+          <Button
+            size="default"
+            className={cn(
+              'w-full mt-4 font-semibold shadow-md',
+              isOpened 
+                ? 'bg-success hover:bg-success/90' 
+                : 'bg-primary hover:bg-primary/90'
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAction()
+            }}
+          >
+            <Maximize2 className="mr-2 h-4 w-4" />
+            Präsentation starten
+          </Button>
+        )}
       </CardContent>
     </Card>
   )
@@ -988,6 +1033,19 @@ export function ContentViewer() {
         onClose={() => setReferencesPanelOpen(false)}
         references={references}
         onOpenReference={handleOpenReference}
+        onStartPresentation={(ref, url) => {
+          // Mark as opened
+          if (!state.contentProgress[ref.id]) {
+            dispatch({ 
+              type: 'SET_CONTENT_PROGRESS', 
+              contentId: ref.id, 
+              opened: true 
+            })
+          }
+          // Open PDF modal
+          setSelectedPdf({ content: ref, url })
+          setPdfModalOpen(true)
+        }}
         openedRefs={openedRefsSet}
       />
     </div>
